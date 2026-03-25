@@ -23,6 +23,17 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const body = await request.json();
+
+  if (!body.categoryId) {
+    return NextResponse.json({ error: "categoryId is required" }, { status: 400 });
+  }
+  if (body.amount === undefined || body.amount === null || body.amount === "") {
+    return NextResponse.json({ error: "amount is required" }, { status: 400 });
+  }
+  if (!body.month) {
+    return NextResponse.json({ error: "month is required" }, { status: 400 });
+  }
+
   const month = startOfMonth(parseISO(`${body.month}-01`));
   const budget = await prisma.budget.upsert({
     where: { categoryId_month: { categoryId: body.categoryId, month } },

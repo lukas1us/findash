@@ -8,7 +8,7 @@ export async function GET() {
     orderBy: { fetchedAt: "desc" },
   });
   // Get only latest per asset
-  const latest = new Map<string, typeof prices[0]>();
+  const latest = new Map<string, (typeof prices)[0]>();
   for (const p of prices) {
     if (!latest.has(p.assetId)) latest.set(p.assetId, p);
   }
@@ -17,6 +17,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
+
+  if (!body.assetId) {
+    return NextResponse.json({ error: "assetId is required" }, { status: 400 });
+  }
+  if (body.price === undefined || body.price === null || body.price === "") {
+    return NextResponse.json({ error: "price is required" }, { status: 400 });
+  }
+
   const price = await prisma.assetPrice.create({
     data: {
       assetId: body.assetId,

@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { TransactionForm } from "@/components/finance/transaction-form";
 import { useToast } from "@/components/ui/use-toast";
 import { format, subMonths } from "date-fns";
+import Link from "next/link";
 
 interface Transaction {
   id: string;
@@ -75,9 +76,16 @@ export default function TransactionsPage() {
           <h1 className="text-3xl font-bold">Transakce</h1>
           <p className="text-muted-foreground">Správa příjmů a výdajů</p>
         </div>
-        <Button onClick={() => { setEditTx(null); setFormOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" /> Nová transakce
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/finance/transactions/import">
+              <Upload className="mr-2 h-4 w-4" /> Import CSV
+            </Link>
+          </Button>
+          <Button onClick={() => { setEditTx(null); setFormOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" /> Nová transakce
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

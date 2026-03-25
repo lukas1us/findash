@@ -30,6 +30,23 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const body = await request.json();
+
+  if (!body.accountId) {
+    return NextResponse.json({ error: "accountId is required" }, { status: 400 });
+  }
+  if (body.amount === undefined || body.amount === null || body.amount === "") {
+    return NextResponse.json({ error: "amount is required" }, { status: 400 });
+  }
+  if (Number(body.amount) < 0) {
+    return NextResponse.json({ error: "amount must be non-negative" }, { status: 400 });
+  }
+
+  // Verify account exists
+  const account = await prisma.account.findUnique({ where: { id: body.accountId } });
+  if (!account) {
+    return NextResponse.json({ error: "accountId does not exist" }, { status: 400 });
+  }
+
   const transaction = await prisma.transaction.create({
     data: {
       accountId: body.accountId,
