@@ -6,10 +6,11 @@ Webová aplikace pro sledování osobních financí a investičního portfolia.
 
 - **Frontend**: Next.js 14 (App Router) + Tailwind CSS + shadcn/ui
 - **Backend**: Next.js API Routes
-- **ORM**: Prisma
+- **ORM**: Prisma 7
 - **DB**: PostgreSQL
 - **Charts**: Recharts
 - **Docker**: docker-compose
+- **Testy**: Jest + ts-jest
 
 ---
 
@@ -104,9 +105,73 @@ Realistická česká data:
 
 ---
 
+## Testování
+
+Testy volají Next.js route handlery přímo (bez HTTP serveru). Používají separátní PostgreSQL databázi, aby dev databáze zůstala nedotčená.
+
+### Nastavení
+
+**1. Vytvoř testovací databázi:**
+```bash
+psql -U postgres -c "CREATE DATABASE findash_test;"
+```
+
+**2. Vytvoř `.env.test`:**
+```bash
+cp .env.test.example .env.test
+# Uprav přihlašovací údaje dle potřeby
+```
+
+**3. Spusť testy** (migrace se aplikují automaticky před prvním spuštěním):
+```bash
+npm test
+```
+
+### Příkazy
+
+| Příkaz | Popis |
+|--------|-------|
+| `npm test` | Spustí všechny testy |
+| `npm run test:watch` | Sleduje změny a opakuje testy |
+| `npm run test:coverage` | Testy s reportem pokrytí |
+
+### Spuštění konkrétní sady
+
+```bash
+npx jest --testPathPattern=accounts
+npx jest --testPathPattern=transactions
+npx jest --testPathPattern=investments/stats
+```
+
+### Struktura testů
+
+```
+__tests__/
+  helpers/
+    db.ts          # sdílený Prisma client + helpers pro čištění tabulek
+    factories.ts   # createTestAccount(), createTestAsset(), …
+  api/
+    finance/
+      accounts.test.ts
+      categories.test.ts
+      transactions.test.ts
+      budgets.test.ts
+      stats.test.ts
+    investments/
+      assets.test.ts
+      purchases.test.ts
+      prices.test.ts
+      stats.test.ts
+```
+
+Volání externích API (CoinGecko) jsou mockována pomocí `jest.spyOn(global, 'fetch')` — v testech nedochází k žádným síťovým požadavkům.
+
+---
+
 ## Environment Variables
 
 | Proměnná | Výchozí | Popis |
 |----------|---------|-------|
 | `DATABASE_URL` | `postgresql://postgres:password@localhost:5432/findash` | Připojení k PostgreSQL |
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | URL aplikace |
+| `DATABASE_URL_TEST` | `postgresql://postgres:password@localhost:5432/findash_test` | Testovací DB (`.env.test`) |
