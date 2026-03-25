@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Finance ──────────────────────────────────────────────────────────────────
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CASH
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+model Account {
+  id           String        @id @default(cuid())
+  name         String
+  type         AccountType
+  currency     String        @default("CZK")
+  balance      Float         @default(0)
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+}
+
+model Category {
+  id           String          @id @default(cuid())
+  name         String
+  type         CategoryType
+  color        String          @default("#6366f1")
+  icon         String          @default("tag")
+  transactions Transaction[]
+  budgets      Budget[]
+}
+
+model Transaction {
+  id          String          @id @default(cuid())
+  accountId   String
+  categoryId  String
+  amount      Float
+  type        TransactionType
+  description String?
+  date        DateTime
+  createdAt   DateTime        @default(now())
+  account     Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  category    Category        @relation(fields: [categoryId], references: [id])
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  categoryId String
+  amount     Float
+  month      DateTime
+  createdAt  DateTime @default(now())
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([categoryId, month])
+}
+
+// ─── Investments ──────────────────────────────────────────────────────────────
+
+enum AssetType {
+  CRYPTO
+  REAL_ESTATE
+  GOLD_SILVER
+  OTHER
+}
+
+enum PriceSource {
+  MANUAL
+  API
+}
+
+model Asset {
+  id        String      @id @default(cuid())
+  name      String
+  ticker    String
+  type      AssetType
+  currency  String      @default("CZK")
+  purchases Purchase[]
+  prices    AssetPrice[]
+}
+
+model Purchase {
+  id           String   @id @default(cuid())
+  assetId      String
+  date         DateTime
+  quantity     Float
+  pricePerUnit Float
+  fees         Float    @default(0)
+  notes        String?
+  createdAt    DateTime @default(now())
+  asset        Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+}
+
+model AssetPrice {
+  id        String      @id @default(cuid())
+  assetId   String
+  price     Float
+  source    PriceSource @default(MANUAL)
+  fetchedAt DateTime    @default(now())
+  asset     Asset       @relation(fields: [assetId], references: [id], onDelete: Cascade)
+}
