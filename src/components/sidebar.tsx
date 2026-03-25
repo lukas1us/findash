@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const financeLinks = [
   { href: "/finance", label: "Přehled", icon: LayoutDashboard },
@@ -81,13 +82,13 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const sidebarContent = (
-    <div className="flex h-full flex-col gap-6 py-6 px-3">
-      <div className="flex items-center gap-2 px-3">
+    <div className="flex h-full min-h-0 flex-col py-6 px-3">
+      <div className="flex shrink-0 items-center gap-2 px-3">
         <BarChart3 className="h-6 w-6 text-primary" />
         <span className="text-lg font-bold">FinDash</span>
       </div>
-      <Separator />
-      <nav className="flex flex-col gap-6">
+      <Separator className="my-6 shrink-0" />
+      <nav className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto">
         <NavSection
           title="Finance"
           links={financeLinks}
@@ -101,6 +102,7 @@ export function Sidebar() {
           onLinkClick={() => setMobileOpen(false)}
         />
       </nav>
+      <ThemeToggle />
     </div>
   );
 

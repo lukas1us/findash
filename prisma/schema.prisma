@@ -46,16 +46,23 @@ model Category {
 }
 
 model Transaction {
-  id          String          @id @default(cuid())
-  accountId   String
-  categoryId  String
-  amount      Float
-  type        TransactionType
-  description String?
-  date        DateTime
-  createdAt   DateTime        @default(now())
-  account     Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  category    Category        @relation(fields: [categoryId], references: [id])
+  id               String          @id @default(cuid())
+  accountId        String
+  categoryId       String
+  amount           Float
+  type             TransactionType
+  description      String?
+  date             DateTime
+  createdAt        DateTime        @default(now())
+  // CSV import audit fields
+  externalId       String?         // source-specific dedup key (e.g. Air Bank ID transakce)
+  originalCurrency String?         // original currency before FX conversion
+  originalAmount   Float?          // original amount before FX conversion
+  exchangeRate     Float?          // CZK rate used for conversion
+  account          Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  category         Category        @relation(fields: [categoryId], references: [id])
+
+  @@index([externalId])
 }
 
 model Budget {
@@ -67,6 +74,18 @@ model Budget {
   category   Category @relation(fields: [categoryId], references: [id])
 
   @@unique([categoryId, month])
+}
+
+model ExchangeRate {
+  id           String   @id @default(cuid())
+  fromCurrency String
+  toCurrency   String   @default("CZK")
+  rate         Float
+  date         String   // YYYY-MM-DD
+  source       String   @default("ECB")
+  fetchedAt    DateTime @default(now())
+
+  @@unique([fromCurrency, toCurrency, date])
 }
 
 // ─── Investments ──────────────────────────────────────────────────────────────
@@ -84,11 +103,11 @@ enum PriceSource {
 }
 
 model Asset {
-  id        String      @id @default(cuid())
+  id        String       @id @default(cuid())
   name      String
   ticker    String
   type      AssetType
-  currency  String      @default("CZK")
+  currency  String       @default("CZK")
   purchases Purchase[]
   prices    AssetPrice[]
 }
@@ -102,7 +121,11 @@ model Purchase {
   fees         Float    @default(0)
   notes        String?
   createdAt    DateTime @default(now())
+  // CSV import
+  externalId   String?  // source-specific dedup key
   asset        Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([externalId])
 }
 
 model AssetPrice {

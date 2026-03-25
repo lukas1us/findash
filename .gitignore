@@ -32,6 +32,9 @@ Thumbs.db
 # TypeScript cache
 *.tsbuildinfo
 
+# Prisma (generated client; see prisma/schema.prisma `output`)
+src/generated/prisma/
+
 # Next.js deployment
 .vercel/
 
