@@ -10,7 +10,7 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate
+# prisma generate is included in `npm run build` (prisma generate && next build)
 RUN npm run build
 
 FROM base AS runner
@@ -22,7 +22,8 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# Prisma 7: generated client is in src/generated/prisma, not node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/src/generated ./src/generated
 USER nextjs
 EXPOSE 3000
 ENV PORT 3000

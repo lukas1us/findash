@@ -25,16 +25,17 @@ cp .env.example .env
 docker-compose up postgres -d
 ```
 
-### 3. Nainstaluj závislosti
+### 3. Nainstaluj závislosti (generuje Prisma client automaticky přes postinstall)
 ```bash
 npm install
 ```
 
-### 4. Migruj databázi a vygeneruj Prisma client
+### 4. Migruj databázi
 ```bash
-npm run db:generate
 npm run db:migrate
 ```
+
+> **Poznámka (Prisma 7):** `prisma migrate dev` nespouští seed automaticky. Seed je třeba spustit ručně (krok 5).
 
 ### 5. Seed – ukázkových data
 ```bash
