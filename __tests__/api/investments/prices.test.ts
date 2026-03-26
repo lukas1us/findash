@@ -1,6 +1,6 @@
 import { clearInvestments, testDb } from "../../helpers/db";
 import { createTestAsset, createTestPrice } from "../../helpers/factories";
-import { GET, POST } from "@/app/api/investments/prices/route";
+import { GET, POST, PATCH, DELETE } from "@/app/api/investments/prices/route";
 import { POST as FETCH_POST } from "@/app/api/investments/prices/fetch/route";
 
 const BASE = "http://localhost:3000";
@@ -17,6 +17,8 @@ function jsonReq(path: string, method: string, body: unknown) {
   });
 }
 
+const TEST_DATE = "2024-01-15T00:00:00.000Z";
+
 let cryptoAssetId: string;
 
 beforeAll(async () => {
@@ -31,7 +33,7 @@ beforeEach(async () => {
 
 describe("GET /api/investments/prices", () => {
   it("returns empty array when no prices exist", async () => {
-    const res = await GET();
+    const res = await GET(req("/api/investments/prices"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toEqual([]);
@@ -48,12 +50,17 @@ describe("GET /api/investments/prices", () => {
       data: { assetId: cryptoAssetId, price: 1500000, source: "MANUAL" },
     });
 
-    const res = await GET();
+    const res = await GET(req("/api/investments/prices"));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toHaveLength(1);
     expect(data[0].price).toBe(1500000);
     expect(data[0].asset).toBeDefined();
+  });
+
+  it("rejects invalid limit → 400", async () => {
+    const res = await GET(req("/api/investments/prices?limit=abc"));
+    expect(res.status).toBe(400);
   });
 });
 
@@ -63,6 +70,7 @@ describe("POST /api/investments/prices", () => {
       jsonReq("/api/investments/prices", "POST", {
         assetId: cryptoAssetId,
         price: 1600000,
+        date: TEST_DATE,
         source: "MANUAL",
       })
     );
@@ -82,6 +90,7 @@ describe("POST /api/investments/prices", () => {
       jsonReq("/api/investments/prices", "POST", {
         assetId: cryptoAssetId,
         price: 1700000,
+        date: TEST_DATE,
       })
     );
     expect(res.status).toBe(201);
@@ -91,15 +100,85 @@ describe("POST /api/investments/prices", () => {
 
   it("fails without assetId → 400", async () => {
     const res = await POST(
-      jsonReq("/api/investments/prices", "POST", { price: 1000000 })
+      jsonReq("/api/investments/prices", "POST", { price: 1000000, date: TEST_DATE })
     );
     expect(res.status).toBe(400);
   });
 
-  it("fails without price → 400", async () => {
+  it("fails without price → 400 with field: price", async () => {
     const res = await POST(
-      jsonReq("/api/investments/prices", "POST", { assetId: cryptoAssetId })
+      jsonReq("/api/investments/prices", "POST", { assetId: cryptoAssetId, date: TEST_DATE })
     );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.field).toBe("price");
+  });
+
+  it("fails with negative price → 400 with field: price", async () => {
+    const res = await POST(
+      jsonReq("/api/investments/prices", "POST", {
+        assetId: cryptoAssetId,
+        price: -100,
+        date: TEST_DATE,
+      })
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.field).toBe("price");
+  });
+
+  it("fails with invalid date format → 400 with field: date", async () => {
+    const res = await POST(
+      jsonReq("/api/investments/prices", "POST", {
+        assetId: cryptoAssetId,
+        price: 1000000,
+        date: "not-a-date",
+      })
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.field).toBe("date");
+  });
+});
+
+describe("PATCH /api/investments/prices", () => {
+  it("updates price by id → 200", async () => {
+    const created = await testDb.assetPrice.create({
+      data: { assetId: cryptoAssetId, price: 1000000, source: "MANUAL" },
+    });
+
+    const res = await PATCH(
+      jsonReq("/api/investments/prices", "PATCH", { id: created.id, price: 2000000 })
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.price).toBe(2000000);
+  });
+
+  it("fails without id → 400 with field: id", async () => {
+    const res = await PATCH(
+      jsonReq("/api/investments/prices", "PATCH", { price: 1000000 })
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.field).toBe("id");
+  });
+});
+
+describe("DELETE /api/investments/prices", () => {
+  it("deletes price by id → 200", async () => {
+    const created = await testDb.assetPrice.create({
+      data: { assetId: cryptoAssetId, price: 1000000, source: "MANUAL" },
+    });
+
+    const res = await DELETE(req(`/api/investments/prices?id=${created.id}`));
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+  });
+
+  it("fails without id → 400", async () => {
+    const res = await DELETE(req("/api/investments/prices"));
     expect(res.status).toBe(400);
   });
 });
