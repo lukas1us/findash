@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import Link from "next/link";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { formatCurrency, formatNumber } from "@/lib/formatters";
 import { useToast } from "@/components/ui/use-toast";
@@ -123,7 +124,11 @@ export default function AssetsPage() {
                 const value = qty * currentPrice;
                 return (
                   <TableRow key={a.id}>
-                    <TableCell className="font-medium">{a.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link href={`/investments/assets/${a.id}`} className="hover:underline">
+                        {a.name}
+                      </Link>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{a.ticker}</TableCell>
                     <TableCell>{TYPE_LABELS[a.type]}</TableCell>
                     <TableCell>{a.currency}</TableCell>

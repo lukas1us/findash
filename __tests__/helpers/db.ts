@@ -7,6 +7,7 @@ export { prisma as testDb };
 
 /** Remove all rows in dependency order to allow re-seeding. */
 export async function clearAll() {
+  await prisma.cryptoTransaction.deleteMany();
   await prisma.assetPrice.deleteMany();
   await prisma.purchase.deleteMany();
   await prisma.asset.deleteMany();
@@ -26,6 +27,7 @@ export async function clearFinance() {
 
 /** Clear only investment-related tables. */
 export async function clearInvestments() {
+  await prisma.cryptoTransaction.deleteMany();
   await prisma.assetPrice.deleteMany();
   await prisma.purchase.deleteMany();
   await prisma.asset.deleteMany();

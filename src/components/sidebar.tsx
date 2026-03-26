@@ -11,6 +11,7 @@ import {
   Package,
   ShoppingCart,
   DollarSign,
+  Upload,
   Menu,
   X,
   BarChart3,
@@ -33,6 +34,7 @@ const investmentLinks = [
   { href: "/investments/assets", label: "Aktiva", icon: Package },
   { href: "/investments/purchases", label: "Nákupy", icon: ShoppingCart },
   { href: "/investments/prices", label: "Ceny", icon: DollarSign },
+  { href: "/investments/import", label: "Import CSV", icon: Upload },
 ];
 
 function NavSection({

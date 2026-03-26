@@ -137,3 +137,35 @@ export async function createTestPrice(
     include: { asset: true },
   });
 }
+
+export async function createTestCryptoTransaction(
+  assetId: string,
+  overrides: Partial<{
+    type: string;
+    date: Date;
+    quantity: number;
+    pricePerUnit: number;
+    totalCZK: number;
+    fee: number;
+    feeCurrency: string;
+    source: string;
+    sourceId: string;
+    notes: string;
+  }> = {}
+) {
+  return testDb.cryptoTransaction.create({
+    data: {
+      assetId,
+      type: (overrides.type as "BUY" | "SELL" | "DEPOSIT" | "WITHDRAWAL" | "REWARD" | "SWAP") ?? "BUY",
+      date: overrides.date ?? new Date("2024-01-01"),
+      quantity: overrides.quantity ?? 0.1,
+      pricePerUnit: overrides.pricePerUnit ?? null,
+      totalCZK: overrides.totalCZK ?? null,
+      fee: overrides.fee ?? null,
+      feeCurrency: overrides.feeCurrency ?? null,
+      source: overrides.source ?? "test",
+      sourceId: overrides.sourceId ?? null,
+      notes: overrides.notes ?? null,
+    },
+  });
+}
