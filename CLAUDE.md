@@ -81,13 +81,25 @@ docs: update README with ECB API setup
 - Use zod for all API input validation
 
 ### API routes
-- Every route validates input with zod before touching the DB
-- Every route returns consistent error format:
-```json
-{ "error": "Human readable message", "field": "fieldName (optional)" }
-```
-- HTTP status codes: 200 OK, 201 Created, 400 Bad Request, 404 Not Found, 409 Conflict, 500 Internal Server Error
-- Never return raw Prisma errors to the client
+
+Every route validates input with Zod before touching the DB.
+Import schemas from `src/lib/validators/`. Never use `request.json()` directly without parsing through a Zod schema.
+
+**Mandatory pattern:**
+\```typescript
+import { mySchema } from "@/lib/validators/my-validator";
+
+const body = await request.json();
+const parsed = mySchema.safeParse(body);
+if (!parsed.success) {
+  const field = parsed.error.errors[0]?.path[0]?.toString();
+  return NextResponse.json(
+    { error: parsed.error.errors[0]?.message ?? "Invalid input", field },
+    { status: 400 }
+  );
+}
+// Use parsed.data from here
+\```
 
 ### Database
 - Never write raw SQL — use Prisma client
