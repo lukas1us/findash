@@ -54,11 +54,12 @@ model Transaction {
   description      String?
   date             DateTime
   createdAt        DateTime        @default(now())
-  // CSV import audit fields
-  externalId       String?         // source-specific dedup key (e.g. Air Bank ID transakce)
-  originalCurrency String?         // original currency before FX conversion
-  originalAmount   Float?          // original amount before FX conversion
-  exchangeRate     Float?          // CZK rate used for conversion
+  externalId       String?
+  importId         String?         @unique
+  importSource     String?
+  originalCurrency String?
+  originalAmount   Float?
+  exchangeRate     Float?
   account          Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
   category         Category        @relation(fields: [categoryId], references: [id])
 
@@ -81,7 +82,7 @@ model ExchangeRate {
   fromCurrency String
   toCurrency   String   @default("CZK")
   rate         Float
-  date         String   // YYYY-MM-DD
+  date         String
   source       String   @default("ECB")
   fetchedAt    DateTime @default(now())
 
@@ -102,14 +103,24 @@ enum PriceSource {
   API
 }
 
+enum CryptoTxType {
+  BUY
+  SELL
+  DEPOSIT
+  WITHDRAWAL
+  REWARD
+  SWAP
+}
+
 model Asset {
-  id        String       @id @default(cuid())
-  name      String
-  ticker    String
-  type      AssetType
-  currency  String       @default("CZK")
-  purchases Purchase[]
-  prices    AssetPrice[]
+  id                 String              @id @default(cuid())
+  name               String
+  ticker             String
+  type               AssetType
+  currency           String              @default("CZK")
+  purchases          Purchase[]
+  prices             AssetPrice[]
+  cryptoTransactions CryptoTransaction[]
 }
 
 model Purchase {
@@ -121,8 +132,7 @@ model Purchase {
   fees         Float    @default(0)
   notes        String?
   createdAt    DateTime @default(now())
-  // CSV import
-  externalId   String?  // source-specific dedup key
+  externalId   String?
   asset        Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@index([externalId])
@@ -135,4 +145,25 @@ model AssetPrice {
   source    PriceSource @default(MANUAL)
   fetchedAt DateTime    @default(now())
   asset     Asset       @relation(fields: [assetId], references: [id], onDelete: Cascade)
+}
+
+model CryptoTransaction {
+  id           String       @id @default(cuid())
+  assetId      String
+  type         CryptoTxType
+  date         DateTime
+  quantity     Float        // positive = receive, negative = spend
+  pricePerUnit Float?       // in CZK; null for deposits/withdrawals/rewards
+  totalCZK     Float?       // total value in CZK at time of transaction
+  fee          Float?
+  feeCurrency  String?
+  source       String       // BINANCE | COINMATE_ORDERS | COINMATE_HISTORY | CRYPTO_COM
+  sourceId     String?      // original ID for dedup
+  notes        String?
+  createdAt    DateTime     @default(now())
+  asset        Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([source, sourceId])
+  @@index([assetId])
+  @@index([date])
 }

@@ -151,6 +151,55 @@ Rules:
 
 ---
 
+## Adding a new import parser
+
+Follow these steps every time you add support for a new CSV or PDF export format.
+Do not skip steps — each one is required for the feature to work end-to-end.
+
+### Before writing any code — gather inputs
+
+Ask the user to provide:
+1. A real header line from the file
+2. At least 2–5 example data rows (including edge cases: missing fields, zero amounts, fees)
+3. Whether this is a finance CSV, crypto CSV, or bank PDF
+
+Do not proceed without these inputs.
+
+### Implementation checklist
+
+- [ ] **1. Create the parser module**
+  - Finance CSV → `src/lib/csv-parsers/<bank-name>.ts`
+  - Crypto CSV → `src/lib/crypto-parsers/<exchange-name>.ts`
+  - Bank PDF → `src/lib/pdf-parsers/<bank-name>.ts`
+  - Output rows must match the existing preve (including `rowIndex` and `parseError`)
+
+- [ ] **2. Update format detection**
+  - Finance CSV → `src/lib/csv-parsers/detect.ts`
+  - Crypto CSV → `src/lib/crypto-parsers/detect.ts`
+  - Add a condition that uniquely identifies the new format (prefer header signature over filename)
+
+- [ ] **3. Update barrel exports**
+  - Finance CSV → `src/lib/csv-parsers/index.ts`
+  - Crypto CSV → `src/lib/crypto-parsers/index.ts`
+
+- [ ] **4. Add fixture and tests**
+  - Drop a fixture file in `mock_csvs/<bank-or-exchange-name>/` using the example rows provided by the user
+  - Add test cases in `__tests__/csv/parsing.test.ts`:
+    - Happy path: all fields present
+    - Edge cases from the provided examples (missing fields, fees, zero amounts)
+    - Unknown format: file that should NOT match this parser
+
+- [ ] **5. Verify preview/confirm routing**
+  - Check `src/app/api/import/preview/route.ts` and `src/app/api/import/confirm/route.ts`
+  - If the new format requires different field mapping or transaction type logic, ue route
+  - Do the same for crypto import routes if applicable
+
+- [ ] **6. Run tests and confirm**
+  - `npm test` must pass before marking the task done
+  - Commit with: `feat: add <format-name> import parser`
+
+---
+
 ## Docker
 - Development: `docker-compose up`
 - DB only: `docker-compose up postgres`

@@ -27,6 +27,7 @@ const financeLinks = [
   { href: "/finance/transactions", label: "Transakce", icon: ArrowLeftRight },
   { href: "/finance/budgets", label: "Rozpočty", icon: Target },
   { href: "/finance/accounts", label: "Účty", icon: Wallet },
+  { href: "/finance/import", label: "Import CSV", icon: Upload },
 ];
 
 const investmentLinks = [
