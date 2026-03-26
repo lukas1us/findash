@@ -89,6 +89,17 @@ model ExchangeRate {
   @@unique([fromCurrency, toCurrency, date])
 }
 
+model NetWorthSnapshot {
+  id               Int      @id @default(autoincrement())
+  date             DateTime @db.Date
+  cashTotal        Decimal  @db.Decimal(12, 2)
+  investmentsTotal Decimal  @db.Decimal(12, 2)
+  total            Decimal  @db.Decimal(12, 2)
+  createdAt        DateTime @default(now())
+
+  @@unique([date])
+}
+
 // ─── Investments ──────────────────────────────────────────────────────────────
 
 enum AssetType {

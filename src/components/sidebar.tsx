@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   BarChart3,
+  LineChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -28,6 +29,10 @@ const financeLinks = [
   { href: "/finance/budgets", label: "Rozpočty", icon: Target },
   { href: "/finance/accounts", label: "Účty", icon: Wallet },
   { href: "/finance/import", label: "Import CSV", icon: Upload },
+];
+
+const overviewLinks = [
+  { href: "/net-worth", label: "Net Worth", icon: LineChart },
 ];
 
 const investmentLinks = [
@@ -95,6 +100,12 @@ export function Sidebar() {
         <NavSection
           title="Finance"
           links={financeLinks}
+          pathname={pathname}
+          onLinkClick={() => setMobileOpen(false)}
+        />
+        <NavSection
+          title="Přehled"
+          links={overviewLinks}
           pathname={pathname}
           onLinkClick={() => setMobileOpen(false)}
         />
