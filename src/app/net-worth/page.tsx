@@ -13,7 +13,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { Wallet, TrendingUp, BarChart3, Save } from "lucide-react";
+import { Wallet, TrendingUp, BarChart3, Save, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { format, parseISO } from "date-fns";
 
@@ -28,13 +28,22 @@ interface Snapshot {
 export default function NetWorthPage() {
   const [history, setHistory] = useState<Snapshot[]>([]);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [months] = useState(12);
 
   const loadHistory = useCallback(() => {
+    setLoadError(null);
     fetch(`/api/net-worth/history?months=${months}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then(setHistory)
-      .catch(() => setHistory([]));
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setHistory(data);
+        } else {
+          setLoadError(data.error ?? "Nepodařilo se načíst historii");
+        }
+      })
+      .catch(() => setLoadError("Nepodařilo se načíst historii"));
   }, [months]);
 
   useEffect(() => {
@@ -43,9 +52,17 @@ export default function NetWorthPage() {
 
   async function handleSave() {
     setSaving(true);
+    setSaveError(null);
     try {
-      await fetch("/api/net-worth/snapshot", { method: "POST" });
+      const res = await fetch("/api/net-worth/snapshot", { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setSaveError(data.error ?? `Chyba ${res.status}`);
+        return;
+      }
       loadHistory();
+    } catch {
+      setSaveError("Nepodařilo se uložit snapshot");
     } finally {
       setSaving(false);
     }
@@ -81,6 +98,20 @@ export default function NetWorthPage() {
           )}
         </Button>
       </div>
+
+      {/* Error banners */}
+      {loadError && (
+        <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          {loadError}
+        </div>
+      )}
+      {saveError && (
+        <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          {saveError}
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-3">
