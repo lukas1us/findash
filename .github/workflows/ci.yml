@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: findash_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Create .env.test
+        run: |
+          cat <<EOF > .env.test
+          DATABASE_URL_TEST=postgresql://postgres:password@localhost:5432/findash_test
+          DATABASE_URL=postgresql://postgres:password@localhost:5432/findash_test
+          NEXT_PUBLIC_APP_URL=http://localhost:3000
+          EOF
+
+      - name: Run Prisma migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/findash_test
+
+      - name: Run tests
+        run: npm test
+        env:
+          NODE_ENV: test
