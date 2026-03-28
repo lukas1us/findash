@@ -23,7 +23,8 @@ export async function GET(request: Request) {
         total: Number(s.total),
       }))
     );
-  } catch {
+  } catch (e) {
+    console.error("[net-worth/history]", e);
     return NextResponse.json({ error: "Nepodařilo se načíst historii" }, { status: 500 });
   }
 }
