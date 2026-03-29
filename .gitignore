@@ -42,5 +42,4 @@ src/generated/prisma/
 # Docker
 *.pid
 
-# CSV mocks
-mock_csvs/
+
