@@ -4,7 +4,7 @@ Webová aplikace pro sledování osobních financí a investičního portfolia.
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14 (App Router) + Tailwind CSS + shadcn/ui
+- **Frontend**: Next.js 16 (App Router) + Tailwind CSS + shadcn/ui
 - **Backend**: Next.js API Routes
 - **ORM**: Prisma 7
 - **DB**: PostgreSQL
@@ -134,6 +134,7 @@ npm test
 | `npm test` | Spustí všechny testy |
 | `npm run test:watch` | Sleduje změny a opakuje testy |
 | `npm run test:coverage` | Testy s reportem pokrytí |
+| `npm run lint` | Spustí ESLint nad `src/` |
 
 ### Spuštění konkrétní sady
 
