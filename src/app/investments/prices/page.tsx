@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Plus } from "lucide-react";
+import { RefreshCw, Plus, Gem } from "lucide-react";
 import { formatCurrencyPrecise, formatDate } from "@/lib/formatters";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
@@ -28,6 +28,7 @@ export default function PricesPage() {
   const [prices, setPrices] = useState<LatestPrice[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [fetching, setFetching] = useState(false);
+  const [fetchingMetals, setFetchingMetals] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [newPrice, setNewPrice] = useState("");
@@ -56,6 +57,31 @@ export default function PricesPage() {
       toast({ title: "Chyba při načítání cen", variant: "destructive" });
     } finally {
       setFetching(false);
+    }
+  }
+
+  async function handleMetalsFetch() {
+    setFetchingMetals(true);
+    try {
+      const res = await fetch("/api/investments/prices/metals", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: "Chyba při načítání cen kovů", description: data.error, variant: "destructive" });
+        return;
+      }
+      if (data.updated.length === 0) {
+        toast({ title: "Žádná aktiva ke stažení", description: data.error ?? "V DB není žádné aktivum XAU/XAG" });
+        return;
+      }
+      toast({
+        title: "Ceny kovů aktualizovány",
+        description: `Aktualizováno: ${data.updated.join(", ")}`,
+      });
+      load();
+    } catch {
+      toast({ title: "Chyba při načítání cen kovů", variant: "destructive" });
+    } finally {
+      setFetchingMetals(false);
     }
   }
 
@@ -95,10 +121,16 @@ export default function PricesPage() {
           <h1 className="text-3xl font-bold">Ceny aktiv</h1>
           <p className="text-muted-foreground">Manuální a automatická aktualizace cen</p>
         </div>
-        <Button onClick={handleAutoFetch} disabled={fetching} variant="outline">
-          <RefreshCw className={`mr-2 h-4 w-4 ${fetching ? "animate-spin" : ""}`} />
-          {fetching ? "Načítám…" : "Auto-fetch krypto"}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleMetalsFetch} disabled={fetchingMetals} variant="outline">
+            <Gem className={`mr-2 h-4 w-4 ${fetchingMetals ? "animate-spin" : ""}`} />
+            {fetchingMetals ? "Načítám…" : "Aktualizovat zlato & stříbro"}
+          </Button>
+          <Button onClick={handleAutoFetch} disabled={fetching} variant="outline">
+            <RefreshCw className={`mr-2 h-4 w-4 ${fetching ? "animate-spin" : ""}`} />
+            {fetching ? "Načítám…" : "Auto-fetch krypto"}
+          </Button>
+        </div>
       </div>
 
       <Card>
