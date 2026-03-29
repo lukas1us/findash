@@ -23,28 +23,50 @@ export async function POST() {
 
   const results: { ticker: string; price: number | null; error?: string }[] = [];
 
-  for (const asset of cryptoAssets) {
-    const geckoId = COINGECKO_IDS[asset.ticker.toUpperCase()];
-    if (!geckoId) {
-      results.push({ ticker: asset.ticker, price: null, error: "CoinGecko ID not found" });
-      continue;
+  // Separate assets with known CoinGecko IDs from unknown ones
+  const knownAssets = cryptoAssets.filter(
+    (a) => COINGECKO_IDS[a.ticker.toUpperCase()]
+  );
+  const unknownAssets = cryptoAssets.filter(
+    (a) => !COINGECKO_IDS[a.ticker.toUpperCase()]
+  );
+
+  for (const asset of unknownAssets) {
+    results.push({ ticker: asset.ticker, price: null, error: "CoinGecko ID not found" });
+  }
+
+  if (knownAssets.length === 0) {
+    return NextResponse.json({ results });
+  }
+
+  // Single batch request for all known tickers
+  const geckoIds = knownAssets.map((a) => COINGECKO_IDS[a.ticker.toUpperCase()]).join(",");
+
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${geckoIds}&vs_currencies=czk`,
+      { cache: "no-store" }
+    );
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => "");
+      throw new Error(`CoinGecko HTTP ${res.status}${errorText ? `: ${errorText}` : ""}`);
     }
+    const data = await res.json();
 
-    try {
-      const res = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${geckoId}&vs_currencies=czk`,
-        { next: { revalidate: 0 } }
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const price = data[geckoId]?.czk;
-      if (!price) throw new Error("No price in response");
-
+    for (const asset of knownAssets) {
+      const geckoId = COINGECKO_IDS[asset.ticker.toUpperCase()];
+      const price: number | undefined = data[geckoId]?.czk;
+      if (price == null) {
+        results.push({ ticker: asset.ticker, price: null, error: "No price in response" });
+        continue;
+      }
       await prisma.assetPrice.create({
         data: { assetId: asset.id, price, source: "API" },
       });
       results.push({ ticker: asset.ticker, price });
-    } catch (err) {
+    }
+  } catch (err) {
+    for (const asset of knownAssets) {
       results.push({ ticker: asset.ticker, price: null, error: String(err) });
     }
   }
