@@ -1,4 +1,5 @@
 import { fetchECBRate } from "@/lib/csv-parsers/ecb-rates";
+import { prisma } from "@/lib/prisma";
 
 export type MetalSymbol = "XAU" | "XAG";
 
@@ -29,8 +30,20 @@ export async function fetchMetalPrice(symbol: MetalSymbol): Promise<MetalPriceRe
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const usdCzkRate = await fetchECBRate("USD", today);
-  if (!usdCzkRate) throw new Error("Could not fetch USD/CZK rate from ECB");
+  let usdCzkRate = await fetchECBRate("USD", today);
+
+  if (!usdCzkRate) {
+    // ECB may not have today's rate yet (weekend/holiday/delay) — use last cached rate
+    const cached = await prisma.exchangeRate.findFirst({
+      where: { fromCurrency: "USD", toCurrency: "CZK" },
+      orderBy: { date: "desc" },
+    });
+    if (cached) {
+      usdCzkRate = cached.rate;
+    } else {
+      throw new Error("Could not fetch USD/CZK rate from ECB and no cached rate available");
+    }
+  }
 
   return {
     priceUsd,

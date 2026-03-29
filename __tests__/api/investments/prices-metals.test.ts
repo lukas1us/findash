@@ -98,6 +98,31 @@ describe("POST /api/investments/prices/metals", () => {
     expect(data.error).toBeDefined();
   });
 
+  it("uses cached DB rate when ECB is unavailable", async () => {
+    await createTestAsset({ name: "Zlato", ticker: "XAU", type: "GOLD_SILVER" });
+
+    // Seed a cached exchange rate so fallback works
+    await testDb.exchangeRate.upsert({
+      where: { fromCurrency_toCurrency_date: { fromCurrency: "USD", toCurrency: "CZK", date: "2026-03-27" } },
+      update: { rate: MOCK_USD_CZK },
+      create: { fromCurrency: "USD", toCurrency: "CZK", rate: MOCK_USD_CZK, date: "2026-03-27", source: "ECB" },
+    });
+
+    jest.restoreAllMocks();
+    jest.spyOn(global, "fetch").mockImplementation(async (url) => {
+      if (String(url).includes("goldapi.io")) return mockFetch(String(url));
+      // ECB returns error — force fallback to DB cache
+      return { ok: false, status: 503, text: async () => "" } as Response;
+    });
+
+    const res = await POST();
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.updated).toEqual(["Zlato"]);
+    const saved = await testDb.assetPrice.findFirst({ where: { source: "API" } });
+    expect(saved!.price).toBeCloseTo(MOCK_XAU_USD * MOCK_USD_CZK, 1);
+  });
+
   it("returns 500 when GoldAPI responds with error", async () => {
     await createTestAsset({ name: "Zlato", ticker: "XAU", type: "GOLD_SILVER" });
 
