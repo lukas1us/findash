@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Plus } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/formatters";
+import { formatCurrencyPrecise, formatDate } from "@/lib/formatters";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 
@@ -128,7 +128,7 @@ export default function PricesPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">{a.type}</TableCell>
                     <TableCell className="text-right font-medium">
-                      {p ? formatCurrency(p.price) : <span className="text-muted-foreground">—</span>}
+                      {p ? formatCurrencyPrecise(p.price) : <span className="text-muted-foreground">—</span>}
                     </TableCell>
                     <TableCell>
                       {p && (
