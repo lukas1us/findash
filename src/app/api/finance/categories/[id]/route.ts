@@ -11,12 +11,13 @@ function isNotFound(err: unknown) {
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json();
   try {
     const category = await prisma.category.update({
-      where: { id: params.id },
+      where: { id },
       data: { name: body.name, type: body.type, color: body.color, icon: body.icon },
     });
     return NextResponse.json(category);
@@ -30,10 +31,11 @@ export async function PUT(
 
 export async function DELETE(
   _: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    await prisma.category.delete({ where: { id: params.id } });
+    await prisma.category.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     if (isNotFound(err)) {

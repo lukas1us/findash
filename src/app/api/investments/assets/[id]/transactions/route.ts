@@ -5,8 +5,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { searchParams } = new URL(request.url);
   const types  = searchParams.get("type")?.split(",").filter(Boolean) ?? [];
   const page   = Math.max(1, Number(searchParams.get("page") ?? 1));
@@ -17,7 +18,7 @@ export async function GET(
     ? { date: "asc" as const }
     : { date: "desc" as const };
 
-  const where: Record<string, unknown> = { assetId: params.id };
+  const where: Record<string, unknown> = { assetId: id };
   if (types.length) where.type = { in: types };
 
   const [total, transactions] = await Promise.all([

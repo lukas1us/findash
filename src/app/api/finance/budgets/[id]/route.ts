@@ -11,12 +11,13 @@ function isNotFound(err: unknown) {
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json();
   try {
     const budget = await prisma.budget.update({
-      where: { id: params.id },
+      where: { id },
       data: { amount: Number(body.amount) },
       include: { category: true },
     });
@@ -31,10 +32,11 @@ export async function PUT(
 
 export async function DELETE(
   _: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    await prisma.budget.delete({ where: { id: params.id } });
+    await prisma.budget.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     if (isNotFound(err)) {

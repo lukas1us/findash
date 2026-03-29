@@ -5,10 +5,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const asset = await prisma.asset.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       prices:             { orderBy: { fetchedAt: "desc" }, take: 1 },
       cryptoTransactions: true,

@@ -11,12 +11,13 @@ function isNotFound(err: unknown) {
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json();
 
   // Revert old balance effect
-  const old = await prisma.transaction.findUnique({ where: { id: params.id } });
+  const old = await prisma.transaction.findUnique({ where: { id } });
   if (!old) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -29,7 +30,7 @@ export async function PUT(
 
   try {
     const transaction = await prisma.transaction.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         accountId: body.accountId,
         categoryId: body.categoryId,
@@ -60,10 +61,11 @@ export async function PUT(
 
 export async function DELETE(
   _: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const transaction = await prisma.transaction.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
   if (!transaction) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -76,6 +78,6 @@ export async function DELETE(
     data: { balance: { increment: delta } },
   });
 
-  await prisma.transaction.delete({ where: { id: params.id } });
+  await prisma.transaction.delete({ where: { id } });
   return new NextResponse(null, { status: 204 });
 }

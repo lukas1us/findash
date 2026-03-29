@@ -9,8 +9,9 @@ function isNotFound(err: unknown) {
   );
 }
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const account = await prisma.account.findUnique({ where: { id: params.id } });
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const account = await prisma.account.findUnique({ where: { id } });
   if (!account) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -19,12 +20,13 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const body = await request.json();
   try {
     const account = await prisma.account.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name: body.name,
         type: body.type,
@@ -43,10 +45,11 @@ export async function PUT(
 
 export async function DELETE(
   _: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    await prisma.account.delete({ where: { id: params.id } });
+    await prisma.account.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });
   } catch (err) {
     if (isNotFound(err)) {
