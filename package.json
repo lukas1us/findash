@@ -51,6 +51,10 @@
     "tailwindcss-animate": "^1.0.7",
     "zod": "^4.3.6"
   },
+  "overrides": {
+    "test-exclude": "^7.0.0",
+    "glob": "^13.0.0"
+  },
   "devDependencies": {
     "@babel/preset-env": "^7.29.2",
     "@eslint/eslintrc": "^3.3.5",
