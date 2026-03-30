@@ -141,6 +141,18 @@ async function main() {
   const reEstate = await prisma.asset.create({
     data: { name: "Byt Praha 3", ticker: "RE-PRG3", type: AssetType.REAL_ESTATE, currency: "CZK" },
   });
+  const xlm = await prisma.asset.create({
+    data: { name: "Stellar", ticker: "XLM", type: AssetType.CRYPTO, currency: "CZK" },
+  });
+  const doge = await prisma.asset.create({
+    data: { name: "Dogecoin", ticker: "DOGE", type: AssetType.CRYPTO, currency: "CZK" },
+  });
+  const shib = await prisma.asset.create({
+    data: { name: "Shiba Inu", ticker: "SHIB", type: AssetType.CRYPTO, currency: "CZK" },
+  });
+  const cro = await prisma.asset.create({
+    data: { name: "Cronos", ticker: "CRO", type: AssetType.CRYPTO, currency: "CZK" },
+  });
 
   // ─── Purchases ───────────────────────────────────────────────────────────────
   // BTC purchases
@@ -190,13 +202,17 @@ async function main() {
       { assetId: gold.id, price: 62000, source: PriceSource.MANUAL, fetchedAt: new Date() },
       { assetId: silver.id, price: 730, source: PriceSource.MANUAL, fetchedAt: new Date() },
       { assetId: reEstate.id, price: 5800000, source: PriceSource.MANUAL, fetchedAt: new Date() },
+      { assetId: xlm.id, price: 7.2, source: PriceSource.API, fetchedAt: new Date() },
+      { assetId: doge.id, price: 3.8, source: PriceSource.API, fetchedAt: new Date() },
+      { assetId: shib.id, price: 0.00065, source: PriceSource.API, fetchedAt: new Date() },
+      { assetId: cro.id, price: 2.1, source: PriceSource.API, fetchedAt: new Date() },
     ],
   });
 
   console.log("✅ Seed complete!");
   console.log(`  Accounts: 3`);
   console.log(`  Categories: 10`);
-  console.log(`  Assets: 5`);
+  console.log(`  Assets: 9`);
 }
 
 main()
