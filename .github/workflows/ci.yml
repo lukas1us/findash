@@ -40,11 +40,9 @@ jobs:
 
       - name: Create .env.test
         run: |
-          cat <<EOF > .env.test
-          DATABASE_URL_TEST=postgresql://postgres:password@localhost:5432/findash_test
-          DATABASE_URL=postgresql://postgres:password@localhost:5432/findash_test
-          NEXT_PUBLIC_APP_URL=http://localhost:3000
-          EOF
+          echo "DATABASE_URL_TEST=postgresql://postgres:password@localhost:5432/findash_test" > .env.test
+          echo "DATABASE_URL=postgresql://postgres:password@localhost:5432/findash_test" >> .env.test
+          echo "NEXT_PUBLIC_APP_URL=http://localhost:3000" >> .env.test
 
       - name: Run Prisma migrations
         run: npx prisma migrate deploy
