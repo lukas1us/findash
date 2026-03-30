@@ -13,6 +13,10 @@ const COINGECKO_IDS: Record<string, string> = {
   LINK: "chainlink",
   XRP: "ripple",
   LTC: "litecoin",
+  XLM: "stellar",
+  DOGE: "dogecoin",
+  SHIB: "shiba-inu",
+  CRO: "crypto-com-chain",
   DOGE: "dogecoin",
 };
 
