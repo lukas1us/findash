@@ -11,11 +11,13 @@ export function formatCurrency(amount: number, currency = "CZK"): string {
 }
 
 export function formatCurrencyPrecise(amount: number, currency = "CZK"): string {
+  const abs = Math.abs(amount);
+  const decimals = abs === 0 ? 2 : abs < 0.01 ? 6 : abs < 1 ? 4 : 2;
   return new Intl.NumberFormat("cs-CZ", {
     style: "currency",
     currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   }).format(amount);
 }
 
