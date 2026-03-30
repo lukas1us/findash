@@ -43,6 +43,7 @@ jobs:
           echo "DATABASE_URL_TEST=postgresql://postgres:password@localhost:5432/findash_test" > .env.test
           echo "DATABASE_URL=postgresql://postgres:password@localhost:5432/findash_test" >> .env.test
           echo "NEXT_PUBLIC_APP_URL=http://localhost:3000" >> .env.test
+          echo "GOLD_API_KEY=test-placeholder" >> .env.test
 
       - name: Run Prisma migrations
         run: npx prisma migrate deploy
