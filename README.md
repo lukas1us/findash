@@ -63,6 +63,16 @@ docker-compose exec app npx prisma migrate deploy
 docker-compose exec app npx tsx prisma/seed.ts
 ```
 
+## Docker — běžné operace
+
+| Příkaz | Popis |
+|--------|-------|
+| `docker-compose up` | Spustí celý stack (dev) |
+| `docker-compose up postgres` | Spustí pouze databázi |
+| `docker-compose down && docker-compose up --build` | Po stažení změn — rebuild |
+
+> **Pozor:** Nikdy nespouštěj `docker-compose down -v` bez explicitního potvrzení — smaže data v databázi.
+
 ---
 
 ## Databázové příkazy
