@@ -34,14 +34,6 @@ If yes to any → update README.md before confirming the task as done.
 
 ## Git workflow
 
-### Branch naming
-```
-feature/short-description     # new features
-fix/short-description         # bug fixes
-refactor/short-description    # refactoring without behavior change
-chore/short-description       # deps, config, tooling
-```
-
 ### Commit after every completed task
 After tests pass and README is reviewed, always commit:
 ```bash
@@ -65,20 +57,9 @@ test: add API tests for investments/purchases
 docs: update README with ECB API setup
 ```
 
-### Never commit
-- Failing tests
-- .env files (check .gitignore)
-- node_modules
-- Build artifacts (.next/)
-
 ---
 
 ## Code rules
-
-### TypeScript
-- No implicit any — always type function parameters and return values
-- Use Prisma generated types — do not redefine DB model types manually
-- Use zod for all API input validation
 
 ### API routes
 
@@ -110,27 +91,6 @@ if (!parsed.success) {
 ### Environment variables
 - Never hardcode URLs, secrets, or API keys
 - All new env vars must be added to `.env.example` with a placeholder value and a comment explaining what it is
-
----
-
-## Project structure conventions
-```
-app/
-  api/              # API routes only — no business logic
-  (pages)/          # Next.js pages
-lib/
-  prisma.ts         # Prisma client singleton
-  validators/       # Zod schemas
-  services/         # Business logic (balance recalculation, price fetching etc.)
-  utils/            # Pure utility functions
-__tests__/
-  api/              # API route tests mirroring app/api/ structure
-```
-
-Rules:
-- API routes call services — they do not contain business logic directly
-- Services are pure functions where possible — easier to test
-- Utils have no side effects and no DB access
 
 ---
 
@@ -197,14 +157,6 @@ Do not proceed without these inputs.
 - [ ] **6. Run tests and confirm**
   - `npm test` must pass before marking the task done
   - Commit with: `feat: add <format-name> import parser`
-
----
-
-## Docker
-- Development: `docker-compose up`
-- DB only: `docker-compose up postgres`
-- After pulling changes: `docker-compose down && docker-compose up --build`
-- Never run `docker-compose down -v` without explicit user confirmation — it deletes DB data
 
 ---
 
