@@ -36,7 +36,7 @@ export default function FinanceImportPage() {
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountId, setAccountId] = useState<string>("");
-  const [bank, setBank] = useState<BankFormat>("fio");
+  const [bank, setBank] = useState<BankFormat>("airbank");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);

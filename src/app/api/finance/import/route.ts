@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
   if (!bank || !VALID_BANKS.includes(bank as BankFormat)) {
     return NextResponse.json(
-      { error: "bank must be one of: fio, csob, generic" },
+      { error: "bank must be one of: airbank, revolut, generic" },
       { status: 400 }
     );
   }
