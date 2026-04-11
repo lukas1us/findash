@@ -38,7 +38,11 @@ export async function POST(request: Request) {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const uint8 = new Uint8Array(arrayBuffer);
-    const parser = new PDFParse({ data: uint8, verbosity: VerbosityLevel.ERRORS });
+    const parser = new PDFParse({
+      data: uint8,
+      password: process.env.AIRBANK_PDF_PASSWORD || undefined,
+      verbosity: VerbosityLevel.ERRORS,
+    });
     const result = await parser.getText();
     pdfText = result.text;
   } catch {
