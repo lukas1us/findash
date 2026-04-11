@@ -41,7 +41,7 @@ export default function AccountsPage() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(() => {
-    fetch("/api/finance/accounts").then((r) => r.json()).then(setAccounts);
+    fetch("/api/finance/accounts").then((r) => (r.ok ? r.json() : [])).then(setAccounts).catch(() => {});
   }, []);
 
   useEffect(() => { load(); }, [load]);

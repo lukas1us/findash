@@ -45,8 +45,9 @@ export default function FinanceImportPage() {
 
   useEffect(() => {
     fetch("/api/finance/accounts")
-      .then((r) => r.json())
-      .then(setAccounts);
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setAccounts)
+      .catch(() => {});
   }, []);
 
   async function handleImport() {

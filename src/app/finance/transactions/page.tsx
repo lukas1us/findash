@@ -51,12 +51,18 @@ export default function TransactionsPage() {
     if (filterMonth) params.set("month", filterMonth);
     if (filterCategory !== "all") params.set("categoryId", filterCategory);
     if (filterType !== "all") params.set("type", filterType);
-    fetch(`/api/finance/transactions?${params}`).then((r) => r.json()).then(setTransactions);
+    fetch(`/api/finance/transactions?${params}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setTransactions)
+      .catch(() => {});
   }, [filterMonth, filterCategory, filterType]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    fetch("/api/finance/categories").then((r) => r.json()).then(setCategories);
+    fetch("/api/finance/categories")
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setCategories)
+      .catch(() => {});
   }, []);
 
   async function handleDelete(id: string) {

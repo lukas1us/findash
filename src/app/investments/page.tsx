@@ -35,7 +35,7 @@ export default function InvestmentsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
-    fetch("/api/investments/stats").then((r) => r.json()).then(setStats);
+    fetch("/api/investments/stats").then((r) => (r.ok ? r.json() : null)).then(setStats).catch(() => {});
   }, []);
 
   const isPositive = (stats?.totalPnlCzk ?? 0) >= 0;

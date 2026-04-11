@@ -35,8 +35,8 @@ export default function PricesPage() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(() => {
-    fetch("/api/investments/prices").then((r) => r.json()).then(setPrices);
-    fetch("/api/investments/assets").then((r) => r.json()).then(setAssets);
+    fetch("/api/investments/prices").then((r) => (r.ok ? r.json() : [])).then(setPrices).catch(() => {});
+    fetch("/api/investments/assets").then((r) => (r.ok ? r.json() : [])).then(setAssets).catch(() => {});
   }, []);
 
   useEffect(() => { load(); }, [load]);

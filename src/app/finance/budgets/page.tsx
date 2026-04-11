@@ -43,8 +43,8 @@ export default function BudgetsPage() {
 
   const load = useCallback(async () => {
     const [budgetsData, txData] = await Promise.all([
-      fetch(`/api/finance/budgets?month=${month}`).then((r) => r.json()),
-      fetch(`/api/finance/transactions?month=${month}&type=EXPENSE`).then((r) => r.json()),
+      fetch(`/api/finance/budgets?month=${month}`).then((r) => (r.ok ? r.json() : [])),
+      fetch(`/api/finance/transactions?month=${month}&type=EXPENSE`).then((r) => (r.ok ? r.json() : [])),
     ]);
     setBudgets(budgetsData);
 
@@ -59,8 +59,9 @@ export default function BudgetsPage() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     fetch("/api/finance/categories")
-      .then((r) => r.json())
-      .then((cats: Category[]) => setCategories(cats.filter((c) => c.type === "EXPENSE")));
+      .then((r) => (r.ok ? r.json() : []))
+      .then((cats: Category[]) => setCategories(cats.filter((c) => c.type === "EXPENSE")))
+      .catch(() => {});
   }, []);
 
   function openNew() {

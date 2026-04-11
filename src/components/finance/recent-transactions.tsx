@@ -23,8 +23,12 @@ export function RecentTransactions() {
 
   useEffect(() => {
     fetch("/api/finance/transactions?limit=10")
-      .then((r) => r.json())
-      .then(setTransactions);
+      .then((r) => {
+        if (!r.ok) return [];
+        return r.json();
+      })
+      .then(setTransactions)
+      .catch(() => {});
   }, []);
 
   return (

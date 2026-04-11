@@ -121,9 +121,9 @@ export default function ImportPage() {
 
   // Load reference data
   useEffect(() => {
-    fetch("/api/finance/accounts").then((r) => r.json()).then(setAccounts);
-    fetch("/api/finance/categories").then((r) => r.json()).then(setCategories);
-    fetch("/api/investments/assets").then((r) => r.json()).then(setAssets);
+    fetch("/api/finance/accounts").then((r) => (r.ok ? r.json() : [])).then(setAccounts).catch(() => {});
+    fetch("/api/finance/categories").then((r) => (r.ok ? r.json() : [])).then(setCategories).catch(() => {});
+    fetch("/api/investments/assets").then((r) => (r.ok ? r.json() : [])).then(setAssets).catch(() => {});
   }, []);
 
   // Pre-select "Poplatky" category for Revolut fee rows

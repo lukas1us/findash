@@ -39,7 +39,7 @@ export default function AssetsPage() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(() => {
-    fetch("/api/investments/assets").then((r) => r.json()).then(setAssets);
+    fetch("/api/investments/assets").then((r) => (r.ok ? r.json() : [])).then(setAssets).catch(() => {});
   }, []);
 
   useEffect(() => { load(); }, [load]);

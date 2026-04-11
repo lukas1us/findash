@@ -19,8 +19,8 @@ export default function FinancePage() {
   const [accounts, setAccounts] = useState<{ balance: number }[]>([]);
 
   useEffect(() => {
-    fetch("/api/finance/stats").then((r) => r.json()).then(setStats);
-    fetch("/api/finance/accounts").then((r) => r.json()).then(setAccounts);
+    fetch("/api/finance/stats").then((r) => (r.ok ? r.json() : null)).then(setStats).catch(() => {});
+    fetch("/api/finance/accounts").then((r) => (r.ok ? r.json() : [])).then(setAccounts).catch(() => {});
   }, []);
 
   const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);

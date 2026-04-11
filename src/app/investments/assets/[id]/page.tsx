@@ -145,7 +145,7 @@ export default function AssetDetailPage() {
   useEffect(() => {
     setStatsLoading(true);
     fetch(`/api/investments/assets/${id}/stats`)
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => { setStats(d); setStatsLoading(false); })
       .catch(() => setStatsLoading(false));
   }, [id]);
@@ -160,8 +160,8 @@ export default function AssetDetailPage() {
     });
     if (typeFilter !== "ALL") params.set("type", typeFilter);
     fetch(`/api/investments/assets/${id}/transactions?${params}`)
-      .then((r) => r.json())
-      .then((d) => { setTxs(d.transactions); setPagination(d.pagination); setTxLoading(false); })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) { setTxs(d.transactions); setPagination(d.pagination); } setTxLoading(false); })
       .catch(() => setTxLoading(false));
   }, [id, page, sortOrder, typeFilter]);
 
@@ -170,8 +170,9 @@ export default function AssetDetailPage() {
   // Load ALL transactions for chart (once, no pagination)
   useEffect(() => {
     fetch(`/api/investments/assets/${id}/transactions?limit=1000&sort=date_asc`)
-      .then((r) => r.json())
-      .then((d) => setAllTxs(d.transactions));
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) setAllTxs(d.transactions); })
+      .catch(() => {});
   }, [id]);
 
   // ── Chart data ─────────────────────────────────────────────────────────────

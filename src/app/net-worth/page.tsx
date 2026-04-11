@@ -35,7 +35,7 @@ export default function NetWorthPage() {
   const loadHistory = useCallback(() => {
     setLoadError(null);
     fetch(`/api/net-worth/history?months=${months}`)
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("not ok"))))
       .then((data) => {
         if (Array.isArray(data)) {
           setHistory(data);

@@ -45,12 +45,12 @@ export default function PurchasesPage() {
 
   const load = useCallback(() => {
     const params = filterAsset !== "all" ? `?assetId=${filterAsset}` : "";
-    fetch(`/api/investments/purchases${params}`).then((r) => r.json()).then(setPurchases);
+    fetch(`/api/investments/purchases${params}`).then((r) => (r.ok ? r.json() : [])).then(setPurchases).catch(() => {});
   }, [filterAsset]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    fetch("/api/investments/assets").then((r) => r.json()).then(setAssets);
+    fetch("/api/investments/assets").then((r) => (r.ok ? r.json() : [])).then(setAssets).catch(() => {});
   }, []);
 
   function openNew() {

@@ -43,8 +43,8 @@ export function TransactionForm({ open, onClose, onSaved, transaction }: Props) 
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch("/api/finance/categories").then((r) => r.json()).then(setCategories);
-    fetch("/api/finance/accounts").then((r) => r.json()).then(setAccounts);
+    fetch("/api/finance/categories").then((r) => (r.ok ? r.json() : [])).then(setCategories).catch(() => {});
+    fetch("/api/finance/accounts").then((r) => (r.ok ? r.json() : [])).then(setAccounts).catch(() => {});
   }, []);
 
   useEffect(() => {
