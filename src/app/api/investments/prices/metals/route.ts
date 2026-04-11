@@ -3,10 +3,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fetchMetalPrice } from "@/lib/gold-api";
 
-const TICKER_TO_SYMBOL = {
-  XAU: "XAU",
-  XAG: "XAG",
-} as const;
+// Maps any common gold/silver ticker variant to the GoldAPI symbol
+const TICKER_TO_SYMBOL: Record<string, "XAU" | "XAG"> = {
+  XAU: "XAU", GOLD: "XAU", AU: "XAU", GLD: "XAU",
+  XAG: "XAG", SILVER: "XAG", AG: "XAG", SLV: "XAG",
+};
 
 export async function POST() {
   const goldSilverAssets = await prisma.asset.findMany({
@@ -22,7 +23,7 @@ export async function POST() {
   }
 
   const symbols = [...new Set(
-    relevantAssets.map((a) => TICKER_TO_SYMBOL[a.ticker.toUpperCase() as keyof typeof TICKER_TO_SYMBOL])
+    relevantAssets.map((a) => TICKER_TO_SYMBOL[a.ticker.toUpperCase()])
   )];
 
   let prices: Record<string, { priceUsd: number; priceCzk: number }>;
@@ -40,7 +41,7 @@ export async function POST() {
 
   const updated: string[] = [];
   for (const asset of relevantAssets) {
-    const symbol = TICKER_TO_SYMBOL[asset.ticker.toUpperCase() as keyof typeof TICKER_TO_SYMBOL];
+    const symbol = TICKER_TO_SYMBOL[asset.ticker.toUpperCase()];
     const price = prices[symbol];
     if (!price) continue;
 
