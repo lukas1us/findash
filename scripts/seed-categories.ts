@@ -26,9 +26,16 @@ const CATEGORIES = [
 async function main() {
   console.log("Seeding categories...");
 
-  const currentMonth = new Date();
-  currentMonth.setDate(1);
-  currentMonth.setHours(0, 0, 0, 0);
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthIndex = now.getMonth(); // 0-based
+
+  // All months from January of this year up to and including the current month
+  const months = Array.from({ length: currentMonthIndex + 1 }, (_, i) => {
+    const d = new Date(currentYear, i, 1);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
 
   let catCreated = 0;
   let budgetCreated = 0;
@@ -40,22 +47,23 @@ async function main() {
       catCreated++;
     }
 
-    // Only create budgets for expense categories
     if (cat.type === CategoryType.EXPENSE) {
-      const existingBudget = await prisma.budget.findFirst({
-        where: { categoryId: category.id, month: currentMonth },
-      });
-      if (!existingBudget) {
-        await prisma.budget.create({
-          data: { categoryId: category.id, amount: 1000, month: currentMonth },
+      for (const month of months) {
+        const existingBudget = await prisma.budget.findFirst({
+          where: { categoryId: category.id, month },
         });
-        budgetCreated++;
+        if (!existingBudget) {
+          await prisma.budget.create({
+            data: { categoryId: category.id, amount: 1000, month },
+          });
+          budgetCreated++;
+        }
       }
     }
   }
 
   console.log(`Done — ${catCreated} categories created, ${CATEGORIES.length - catCreated} already existed.`);
-  console.log(`       ${budgetCreated} budgets created for current month.`);
+  console.log(`       ${budgetCreated} budgets created across ${months.length} months.`);
 }
 
 main()
