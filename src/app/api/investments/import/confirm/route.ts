@@ -5,12 +5,8 @@ import { prisma } from "@/lib/prisma";
 import type { CryptoPreviewRow } from "@/lib/crypto-parsers/types";
 
 interface ConfirmBody {
-  rows:               CryptoPreviewRow[];
-  assetMapping:       Record<string, string>; // ticker → assetId (or "" to auto-create)
-  // Optional: if provided, a finance Transaction is created for each BUY/SELL/REWARD row
-  accountId?:         string;
-  expenseCategoryId?: string; // used for BUY
-  incomeCategoryId?:  string; // used for SELL, REWARD
+  rows:         CryptoPreviewRow[];
+  assetMapping: Record<string, string>; // ticker → assetId (or "" to auto-create)
 }
 
 interface SourceSummary {
@@ -21,9 +17,7 @@ interface SourceSummary {
 
 export async function POST(request: Request) {
   const body: ConfirmBody = await request.json();
-  const { rows, assetMapping = {}, accountId, expenseCategoryId, incomeCategoryId } = body;
-
-  const bookToAccount = !!(accountId && (expenseCategoryId || incomeCategoryId));
+  const { rows, assetMapping = {} } = body;
 
   const summary: Record<string, SourceSummary> = {};
 
@@ -82,42 +76,28 @@ export async function POST(request: Request) {
         },
       });
 
-      // Optionally create a finance transaction
-      if (bookToAccount) {
-        const txType = row.type === "BUY"  ? "EXPENSE"
-                     : row.type === "SELL" ? "INCOME"
-                     : row.type === "REWARD" ? "INCOME"
-                     : null;
+      // Mirror BUY/SELL rows as Purchase records so they appear on /investments/purchases.
+      // externalId is set so the stats route can exclude them when CryptoTransactions exist
+      // (prevents double-counting). REWARD/DEPOSIT/WITHDRAWAL/SWAP are skipped.
+      if ((row.type === "BUY" || row.type === "SELL") && row.sourceId) {
+        const purchaseExternalId = `${row.source}_${row.sourceId}`;
+        const exists = await prisma.purchase.findFirst({ where: { externalId: purchaseExternalId } });
+        if (!exists) {
+          const qty = Math.abs(row.quantity);
+          const price = row.pricePerUnit
+            ?? (row.totalCZK && qty > 0 ? row.totalCZK / qty : 0);
 
-        const categoryId = txType === "EXPENSE" ? expenseCategoryId
-                         : txType === "INCOME"  ? incomeCategoryId
-                         : null;
-
-        if (txType && categoryId) {
-          const amount = row.totalCZK
-            ?? (Math.abs(row.quantity) * (row.pricePerUnit ?? 0));
-
-          const importId = row.sourceId
-            ? `crypto_${row.source}_${row.sourceId}`
-            : null;
-
-          await prisma.transaction.create({
+          await prisma.purchase.create({
             data: {
-              accountId:    accountId!,
-              categoryId,
-              type:         txType,
-              amount,
+              assetId,
+              type:         row.type === "BUY" ? "BUY" : "SELL",
               date:         new Date(row.date + "T00:00:00Z"),
-              description:  `${row.type} ${row.ticker}`,
-              importId:     importId ?? undefined,
-              importSource: row.source,
+              quantity:     qty,
+              pricePerUnit: price,
+              fees:         row.fee ?? 0,
+              notes:        row.notes ?? null,
+              externalId:   purchaseExternalId,
             },
-          });
-
-          // Adjust account balance
-          await prisma.account.update({
-            where: { id: accountId! },
-            data:  { balance: { increment: txType === "INCOME" ? amount : -amount } },
           });
         }
       }
