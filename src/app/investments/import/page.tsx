@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button }   from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge }    from "@/components/ui/badge";
@@ -11,7 +11,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/formatters";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { CryptoFilePreview, CryptoPreviewRow } from "@/lib/crypto-parsers/types";
+
+interface Account  { id: string; name: string; currency: string }
+interface Category { id: string; name: string; type: "INCOME" | "EXPENSE" }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -48,6 +53,18 @@ export default function CryptoImportPage() {
   const [previews,   setPreviews]   = useState<CryptoFilePreview[]>([]);
   const [skipped,    setSkipped]    = useState<Record<string, boolean>>({}); // "fileIdx:rowIdx" → skip
   const [importResult, setImportResult] = useState<Record<string, { imported: number; skipped: number; errors: string[] }> | null>(null);
+
+  const [accounts,   setAccounts]   = useState<Account[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [bookAccountId,        setBookAccountId]        = useState("");
+  const [bookExpenseCategoryId, setBookExpenseCategoryId] = useState("");
+  const [bookIncomeCategoryId,  setBookIncomeCategoryId]  = useState("");
+
+  // ── Load accounts & categories ────────────────────────────────────────────
+  useEffect(() => {
+    fetch("/api/finance/accounts").then((r) => r.ok ? r.json() : []).then(setAccounts).catch(() => {});
+    fetch("/api/finance/categories").then((r) => r.ok ? r.json() : []).then(setCategories).catch(() => {});
+  }, []);
 
   // ── File handling ─────────────────────────────────────────────────────────
 
@@ -105,7 +122,13 @@ export default function CryptoImportPage() {
       const res = await fetch("/api/investments/import/confirm", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ rows: allRows, assetMapping: {} }),
+        body:    JSON.stringify({
+          rows:               allRows,
+          assetMapping:       {},
+          accountId:          bookAccountId        || undefined,
+          expenseCategoryId:  bookExpenseCategoryId || undefined,
+          incomeCategoryId:   bookIncomeCategoryId  || undefined,
+        }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { summary } = await res.json();
@@ -116,7 +139,7 @@ export default function CryptoImportPage() {
     } finally {
       setImporting(false);
     }
-  }, [previews, skipped, toast]);
+  }, [previews, skipped, toast, bookAccountId, bookExpenseCategoryId, bookIncomeCategoryId]);
 
   // ── Totals ────────────────────────────────────────────────────────────────
 
@@ -305,6 +328,59 @@ export default function CryptoImportPage() {
               </CardContent>
             </Card>
           ))}
+
+          {/* Optional: book to finance account */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Zaznamenat do účtu (volitelné)</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Nákupy se zaúčtují jako výdaj, prodeje a odměny jako příjem. Pokud nevyberete účet, záznamy se nevytvoří.
+              </p>
+            </CardHeader>
+            <CardContent className="grid grid-cols-3 gap-4 pt-0">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Účet</Label>
+                <Select value={bookAccountId} onValueChange={setBookAccountId}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Nevybráno" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id} className="text-xs">
+                        {a.name} ({a.currency})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Kategorie výdajů (nákupy)</Label>
+                <Select value={bookExpenseCategoryId} onValueChange={setBookExpenseCategoryId}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Nevybráno" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.filter((c) => c.type === "EXPENSE").map((c) => (
+                      <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Kategorie příjmů (prodeje / odměny)</Label>
+                <Select value={bookIncomeCategoryId} onValueChange={setBookIncomeCategoryId}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Nevybráno" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.filter((c) => c.type === "INCOME").map((c) => (
+                      <SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => { setStep(1); setPreviews([]); }}>

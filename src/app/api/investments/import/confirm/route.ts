@@ -5,8 +5,12 @@ import { prisma } from "@/lib/prisma";
 import type { CryptoPreviewRow } from "@/lib/crypto-parsers/types";
 
 interface ConfirmBody {
-  rows:         CryptoPreviewRow[];
-  assetMapping: Record<string, string>; // ticker → assetId (or "" to auto-create)
+  rows:               CryptoPreviewRow[];
+  assetMapping:       Record<string, string>; // ticker → assetId (or "" to auto-create)
+  // Optional: if provided, a finance Transaction is created for each BUY/SELL/REWARD row
+  accountId?:         string;
+  expenseCategoryId?: string; // used for BUY
+  incomeCategoryId?:  string; // used for SELL, REWARD
 }
 
 interface SourceSummary {
@@ -17,7 +21,9 @@ interface SourceSummary {
 
 export async function POST(request: Request) {
   const body: ConfirmBody = await request.json();
-  const { rows, assetMapping = {} } = body;
+  const { rows, assetMapping = {}, accountId, expenseCategoryId, incomeCategoryId } = body;
+
+  const bookToAccount = !!(accountId && (expenseCategoryId || incomeCategoryId));
 
   const summary: Record<string, SourceSummary> = {};
 
@@ -26,9 +32,8 @@ export async function POST(request: Request) {
 
   const tickers = Array.from(new Set(rows.filter((r) => !r.parseError).map((r) => r.ticker)));
   for (const ticker of tickers) {
-    if (tickerToAssetId[ticker]) continue; // already mapped
+    if (tickerToAssetId[ticker]) continue;
 
-    // Try to find existing asset by ticker
     let asset = await prisma.asset.findFirst({
       where: { ticker: { equals: ticker, mode: "insensitive" } },
     });
@@ -76,6 +81,47 @@ export async function POST(request: Request) {
           notes:        row.notes       ?? null,
         },
       });
+
+      // Optionally create a finance transaction
+      if (bookToAccount) {
+        const txType = row.type === "BUY"  ? "EXPENSE"
+                     : row.type === "SELL" ? "INCOME"
+                     : row.type === "REWARD" ? "INCOME"
+                     : null;
+
+        const categoryId = txType === "EXPENSE" ? expenseCategoryId
+                         : txType === "INCOME"  ? incomeCategoryId
+                         : null;
+
+        if (txType && categoryId) {
+          const amount = row.totalCZK
+            ?? (Math.abs(row.quantity) * (row.pricePerUnit ?? 0));
+
+          const importId = row.sourceId
+            ? `crypto_${row.source}_${row.sourceId}`
+            : null;
+
+          await prisma.transaction.create({
+            data: {
+              accountId:    accountId!,
+              categoryId,
+              type:         txType,
+              amount,
+              date:         new Date(row.date + "T00:00:00Z"),
+              description:  `${row.type} ${row.ticker}`,
+              importId:     importId ?? undefined,
+              importSource: row.source,
+            },
+          });
+
+          // Adjust account balance
+          await prisma.account.update({
+            where: { id: accountId! },
+            data:  { balance: { increment: txType === "INCOME" ? amount : -amount } },
+          });
+        }
+      }
+
       summary[src].imported++;
     } catch (err: unknown) {
       // Unique constraint violation = duplicate → skip silently
