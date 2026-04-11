@@ -14,7 +14,24 @@ import { formatCurrency, formatDate, formatNumber } from "@/lib/formatters";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
 
-interface Asset { id: string; name: string; ticker: string }
+type WeightUnit = "oz" | "g" | "kg";
+
+const WEIGHT_UNIT_LABELS: Record<WeightUnit, string> = { oz: "oz", g: "g", kg: "kg" };
+
+// Convert quantity and pricePerUnit from the chosen unit to oz (base unit)
+const G_PER_OZ = 31.1035;
+function toOz(qty: number, unit: WeightUnit): number {
+  if (unit === "g")  return qty / G_PER_OZ;
+  if (unit === "kg") return (qty * 1000) / G_PER_OZ;
+  return qty;
+}
+function pricePerOz(pricePerUnit: number, unit: WeightUnit): number {
+  if (unit === "g")  return pricePerUnit * G_PER_OZ;
+  if (unit === "kg") return pricePerUnit / 1000 * G_PER_OZ;
+  return pricePerUnit;
+}
+
+interface Asset { id: string; name: string; ticker: string; type: string }
 interface Purchase {
   id: string;
   assetId: string;
@@ -41,7 +58,11 @@ export default function PurchasesPage() {
     fees: "0",
     notes: "",
   });
+  const [unit, setUnit] = useState<WeightUnit>("oz");
   const [saving, setSaving] = useState(false);
+
+  const selectedAsset = assets.find((a) => a.id === form.assetId);
+  const isGoldSilver = selectedAsset?.type === "GOLD_SILVER";
 
   const load = useCallback(() => {
     const params = filterAsset !== "all" ? `?assetId=${filterAsset}` : "";
@@ -55,12 +76,14 @@ export default function PurchasesPage() {
 
   function openNew() {
     setEditPurchase(null);
+    setUnit("oz");
     setForm({ assetId: filterAsset !== "all" ? filterAsset : "", date: format(new Date(), "yyyy-MM-dd"), quantity: "", pricePerUnit: "", fees: "0", notes: "" });
     setFormOpen(true);
   }
 
   function openEdit(p: Purchase) {
     setEditPurchase(p);
+    setUnit("oz"); // always edit in base unit
     setForm({
       assetId: p.assetId,
       date: format(new Date(p.date), "yyyy-MM-dd"),
@@ -84,8 +107,12 @@ export default function PurchasesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          quantity: Number(form.quantity),
-          pricePerUnit: Number(form.pricePerUnit),
+          quantity: isGoldSilver && !editPurchase
+            ? toOz(Number(form.quantity), unit)
+            : Number(form.quantity),
+          pricePerUnit: isGoldSilver && !editPurchase
+            ? pricePerOz(Number(form.pricePerUnit), unit)
+            : Number(form.pricePerUnit),
           fees: Number(form.fees),
         }),
       });
@@ -222,18 +249,34 @@ export default function PurchasesPage() {
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
                 <Label>Množství</Label>
-                <Input
-                  type="number"
-                  step="any"
-                  min="0"
-                  placeholder="0"
-                  value={form.quantity}
-                  onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
-                  required
-                />
+                <div className="flex gap-1">
+                  <Input
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder="0"
+                    value={form.quantity}
+                    onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
+                    required
+                  />
+                  {isGoldSilver && !editPurchase && (
+                    <Select value={unit} onValueChange={(v) => setUnit(v as WeightUnit)}>
+                      <SelectTrigger className="w-20 shrink-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(WEIGHT_UNIT_LABELS) as WeightUnit[]).map((u) => (
+                          <SelectItem key={u} value={u}>{WEIGHT_UNIT_LABELS[u]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
-                <Label>Cena/ks (CZK)</Label>
+                <Label>
+                  Cena/ks (CZK{isGoldSilver && !editPurchase ? `/${unit}` : ""})
+                </Label>
                 <Input
                   type="number"
                   step="any"
