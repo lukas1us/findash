@@ -21,6 +21,7 @@ interface Asset {
   currency: string;
   purchases: { quantity: number; pricePerUnit: number; fees: number }[];
   prices: { price: number }[];
+  cryptoTransactions: { quantity: number }[];
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -119,7 +120,8 @@ export default function AssetsPage() {
             </TableHeader>
             <TableBody>
               {assets.map((a) => {
-                const qty = a.purchases.reduce((s, p) => s + p.quantity, 0);
+                const qty = a.purchases.reduce((s, p) => s + p.quantity, 0)
+                          + a.cryptoTransactions.reduce((s, ct) => s + ct.quantity, 0);
                 const currentPrice = a.prices[0]?.price ?? 0;
                 const value = qty * currentPrice;
                 return (

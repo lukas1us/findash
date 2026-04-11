@@ -9,6 +9,7 @@ export async function GET() {
     include: {
       purchases: { orderBy: { date: "asc" } },
       prices: { orderBy: { fetchedAt: "desc" }, take: 1 },
+      cryptoTransactions: { select: { quantity: true } },
     },
     orderBy: { name: "asc" },
   });
