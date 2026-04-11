@@ -52,6 +52,11 @@ export async function POST(request: Request) {
     const src = row.source;
     if (!summary[src]) summary[src] = { imported: 0, skipped: 0, errors: [] };
 
+    if (row.type !== "BUY" && row.type !== "SELL") {
+      summary[src].skipped++;
+      continue;
+    }
+
     const assetId = tickerToAssetId[row.ticker];
     if (!assetId) {
       summary[src].errors.push(`Neznámý ticker: ${row.ticker}`);
