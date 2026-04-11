@@ -79,10 +79,12 @@ export default function CryptoImportPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: CryptoFilePreview[] = await res.json();
       setPreviews(data);
-      // Auto-skip duplicates
+      // Auto-skip duplicates and non-BUY/SELL rows
       const autoSkip: Record<string, boolean> = {};
       data.forEach((fp, fi) => fp.rows.forEach((r) => {
-        if (r.isDuplicate) autoSkip[`${fi}:${r.rowIndex}`] = true;
+        if (r.isDuplicate || (r.type !== "BUY" && r.type !== "SELL")) {
+          autoSkip[`${fi}:${r.rowIndex}`] = true;
+        }
       }));
       setSkipped(autoSkip);
       setStep(2);
