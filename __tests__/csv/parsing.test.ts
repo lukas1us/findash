@@ -112,9 +112,14 @@ describe("parseBinance (binance_transakce_2.csv)", () => {
     expect(first.quantity).toBeCloseTo(0.00113, 5);
   });
 
-  it("does not include Transaction Spend or Transaction Fee rows", () => {
-    // These are negative-change rows and should be skipped
-    expect(rows.every((r) => r.quantity > 0)).toBe(true);
+  it("has no parseError rows for known operations", () => {
+    expect(rows.filter((r) => r.parseError).length).toBe(0);
+  });
+
+  it("contains SELL rows for LTC from Transaction Sold", () => {
+    const sellRows = rows.filter((r) => r.type === "SELL" && r.ticker === "LTC");
+    expect(sellRows.length).toBeGreaterThan(0);
+    expect(sellRows.every((r) => r.quantity > 0)).toBe(true);
   });
 });
 

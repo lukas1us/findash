@@ -18,8 +18,11 @@ interface BinanceRow {
 const DIRECT_OP: Record<string, CryptoTxType> = {
   Buy:                  "BUY",
   Sell:                 "SELL",
+  "Transaction Buy":    "BUY",
+  "Transaction Sold":   "SELL",
   Deposit:              "DEPOSIT",
   Withdrawal:           "WITHDRAWAL",
+  Withdraw:             "WITHDRAWAL",
   "POS savings interest": "REWARD",
   "Savings Interest":   "REWARD",
   "Staking Rewards":    "REWARD",
@@ -28,6 +31,7 @@ const DIRECT_OP: Record<string, CryptoTxType> = {
 const SWAP_OPS = new Set(["Binance Convert", "Transaction Spend", "Transaction Revenue"]);
 const SKIP_OPS = new Set([
   "P2P Trading",
+  "Transaction Fee",
   "Transfer Between Main Account/Futures and Margin Account",
 ]);
 

@@ -54,7 +54,7 @@ export function parseBinance(csvText: string): CryptoTxRow[] {
       type = "DEPOSIT";
     } else if (opLower === "transaction buy" || opLower === "buy") {
       type = "BUY";
-    } else if (opLower === "sell") {
+    } else if (opLower === "sell" || opLower === "transaction sold") {
       type = "SELL";
     } else if (opLower === "binance convert" || opLower === "transaction revenue") {
       type = "SWAP";
