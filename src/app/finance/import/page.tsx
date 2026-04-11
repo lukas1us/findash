@@ -31,12 +31,15 @@ type ImportResult = {
   errors: string[];
 };
 
+type FileType = "csv" | "pdf";
+
 export default function FinanceImportPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountId, setAccountId] = useState<string>("");
   const [bank, setBank] = useState<BankFormat>("airbank");
+  const [fileType, setFileType] = useState<FileType>("pdf");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -61,9 +64,15 @@ export default function FinanceImportPage() {
       const formData = new FormData();
       formData.append("file", selectedFile);
       formData.append("accountId", accountId);
-      formData.append("bank", bank);
 
-      const res = await fetch("/api/finance/import", {
+      const endpoint =
+        fileType === "pdf" ? "/api/finance/import-pdf" : "/api/finance/import";
+
+      if (fileType === "csv") {
+        formData.append("bank", bank);
+      }
+
+      const res = await fetch(endpoint, {
         method: "POST",
         body: formData,
       });
@@ -90,27 +99,50 @@ export default function FinanceImportPage() {
       <div>
         <h1 className="text-3xl font-bold">Import bankovního výpisu</h1>
         <p className="text-muted-foreground">
-          Importujte transakce z CSV souboru přímo do vybraného účtu
+          Importujte transakce z PDF nebo CSV výpisu přímo do vybraného účtu
         </p>
       </div>
 
       <div className="space-y-4">
-        {/* Bank selector */}
+        {/* File type toggle */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">Formát banky</label>
-          <Select value={bank} onValueChange={(v) => setBank(v as BankFormat)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(BANK_LABELS) as BankFormat[]).map((b) => (
-                <SelectItem key={b} value={b}>
-                  {BANK_LABELS[b]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <label className="text-sm font-medium">Typ souboru</label>
+          <div className="flex rounded-md border overflow-hidden">
+            {(["pdf", "csv"] as FileType[]).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => { setFileType(t); setSelectedFile(null); setResult(null); setError(null); }}
+                className={`flex-1 py-2 text-sm font-medium transition-colors
+                  ${fileType === t
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:bg-accent"
+                  }`}
+              >
+                {t.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Bank selector — only for CSV */}
+        {fileType === "csv" && (
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Formát banky</label>
+            <Select value={bank} onValueChange={(v) => setBank(v as BankFormat)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(BANK_LABELS) as BankFormat[]).map((b) => (
+                  <SelectItem key={b} value={b}>
+                    {BANK_LABELS[b]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Account selector */}
         <div className="space-y-1.5">
@@ -131,7 +163,7 @@ export default function FinanceImportPage() {
 
         {/* File drop zone */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">CSV soubor</label>
+          <label className="text-sm font-medium">{fileType === "pdf" ? "PDF soubor" : "CSV soubor"}</label>
           <div
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
@@ -158,7 +190,7 @@ export default function FinanceImportPage() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv"
+            accept={fileType === "pdf" ? ".pdf" : ".csv"}
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
