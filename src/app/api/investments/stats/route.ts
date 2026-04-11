@@ -7,6 +7,7 @@ export async function GET() {
     include: {
       purchases: true,
       prices: { orderBy: { fetchedAt: "desc" }, take: 1 },
+      cryptoTransactions: { select: { quantity: true, pricePerUnit: true, totalCZK: true, type: true } },
     },
   });
 
@@ -16,8 +17,21 @@ export async function GET() {
   const allocationByType: Record<string, number> = {};
 
   const assetStats = assets.map((asset) => {
-    const totalQty = asset.purchases.reduce((s, p) => s + p.quantity, 0);
-    const totalCost = asset.purchases.reduce((s, p) => s + p.quantity * p.pricePerUnit + p.fees, 0);
+    // Purchases (manual entries) — quantity always positive
+    const purchaseQty  = asset.purchases.reduce((s, p) => s + p.quantity, 0);
+    const purchaseCost = asset.purchases.reduce((s, p) => s + p.quantity * p.pricePerUnit + p.fees, 0);
+
+    // CSV-imported crypto transactions — quantity is signed (+receive / −spend)
+    const ctQty = asset.cryptoTransactions.reduce((s, ct) => s + ct.quantity, 0);
+    const ctCost = asset.cryptoTransactions
+      .filter((ct) => ct.type === "BUY" || ct.type === "SWAP")
+      .reduce((s, ct) => {
+        const cost = ct.totalCZK ?? (Math.abs(ct.quantity) * (ct.pricePerUnit ?? 0));
+        return s + (ct.quantity > 0 ? cost : 0); // only count incoming legs
+      }, 0);
+
+    const totalQty  = purchaseQty + ctQty;
+    const totalCost = purchaseCost + ctCost;
     const avgBuyPrice = totalQty > 0 ? totalCost / totalQty : 0;
     const currentPrice = asset.prices[0]?.price ?? 0;
     const currentValue = totalQty * currentPrice;
