@@ -26,16 +26,36 @@ const CATEGORIES = [
 async function main() {
   console.log("Seeding categories...");
 
-  let created = 0;
+  const currentMonth = new Date();
+  currentMonth.setDate(1);
+  currentMonth.setHours(0, 0, 0, 0);
+
+  let catCreated = 0;
+  let budgetCreated = 0;
+
   for (const cat of CATEGORIES) {
-    const existing = await prisma.category.findFirst({ where: { name: cat.name } });
-    if (!existing) {
-      await prisma.category.create({ data: cat });
-      created++;
+    let category = await prisma.category.findFirst({ where: { name: cat.name } });
+    if (!category) {
+      category = await prisma.category.create({ data: cat });
+      catCreated++;
+    }
+
+    // Only create budgets for expense categories
+    if (cat.type === CategoryType.EXPENSE) {
+      const existingBudget = await prisma.budget.findFirst({
+        where: { categoryId: category.id, month: currentMonth },
+      });
+      if (!existingBudget) {
+        await prisma.budget.create({
+          data: { categoryId: category.id, amount: 1000, month: currentMonth },
+        });
+        budgetCreated++;
+      }
     }
   }
 
-  console.log(`Done — ${created} created, ${CATEGORIES.length - created} already existed.`);
+  console.log(`Done — ${catCreated} categories created, ${CATEGORIES.length - catCreated} already existed.`);
+  console.log(`       ${budgetCreated} budgets created for current month.`);
 }
 
 main()
