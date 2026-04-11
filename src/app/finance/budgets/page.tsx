@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { useToast } from "@/components/ui/use-toast";
 import { format, startOfMonth, endOfMonth, parseISO, subMonths } from "date-fns";
@@ -39,7 +39,11 @@ export default function BudgetsPage() {
   const [editBudget, setEditBudget] = useState<Budget | null>(null);
   const [form, setForm] = useState({ categoryId: "", amount: "" });
   const [saving, setSaving] = useState(false);
+  const [prevMonthHasBudgets, setPrevMonthHasBudgets] = useState(false);
+  const [copying, setCopying] = useState(false);
   const monthOptions = getMonthOptions();
+
+  const prevMonth = format(subMonths(parseISO(`${month}-01`), 1), "yyyy-MM");
 
   const load = useCallback(async () => {
     const [budgetsData, txData] = await Promise.all([
@@ -54,7 +58,17 @@ export default function BudgetsPage() {
       s[tx.categoryId] = (s[tx.categoryId] ?? 0) + tx.amount;
     }
     setSpends(s);
-  }, [month]);
+
+    // Check if previous month has budgets (for copy button)
+    if (budgetsData.length === 0) {
+      fetch(`/api/finance/budgets?month=${prevMonth}`)
+        .then((r) => (r.ok ? r.json() : []))
+        .then((prev: unknown[]) => setPrevMonthHasBudgets(prev.length > 0))
+        .catch(() => setPrevMonthHasBudgets(false));
+    } else {
+      setPrevMonthHasBudgets(false);
+    }
+  }, [month, prevMonth]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -99,6 +113,22 @@ export default function BudgetsPage() {
       toast({ title: "Chyba", variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleCopy() {
+    setCopying(true);
+    try {
+      await fetch("/api/finance/budgets/copy-month", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromMonth: prevMonth, toMonth: month }),
+      });
+      load();
+    } catch {
+      toast({ title: "Chyba při kopírování", variant: "destructive" });
+    } finally {
+      setCopying(false);
     }
   }
 
@@ -190,8 +220,14 @@ export default function BudgetsPage() {
         })}
 
         {budgets.length === 0 && (
-          <div className="col-span-full text-center text-muted-foreground py-12">
-            Žádné rozpočty pro tento měsíc
+          <div className="col-span-full flex flex-col items-center gap-4 py-12 text-muted-foreground">
+            <p>Žádné rozpočty pro tento měsíc</p>
+            {prevMonthHasBudgets && (
+              <Button variant="outline" onClick={handleCopy} disabled={copying}>
+                <Copy className="mr-2 h-4 w-4" />
+                {copying ? "Kopíruji…" : `Zkopírovat z ${monthOptions.find((o) => o.value === prevMonth)?.label ?? prevMonth}`}
+              </Button>
+            )}
           </div>
         )}
       </div>
