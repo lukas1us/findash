@@ -7,6 +7,7 @@ import {
   detectPDFSource,
   parseAirBankPDF,
   parseRevolutPDF,
+  detectCategory,
 } from "@/lib/pdf-parsers/pdf-parser";
 
 export async function POST(request: Request) {
@@ -109,8 +110,16 @@ export async function POST(request: Request) {
 
   const rowsData: TxRow[] = [];
   for (const tx of toInsert) {
+    // 1. Try pdf-parser's detectCategory (broader keyword matching, always returns a name)
+    const detectedName = detectCategory(tx.description);
+    const categoryByName = categories.find(
+      (c) => c.name.toLowerCase() === detectedName.toLowerCase()
+    );
+    // 2. Fall back to suggestCategory, then any EXPENSE category
     const categoryId =
-      suggestCategory(tx.description, categories) ?? fallbackCategory?.id;
+      categoryByName?.id ??
+      suggestCategory(tx.description, categories) ??
+      fallbackCategory?.id;
 
     if (!categoryId) {
       errors.push(`Nelze přiřadit kategorii: ${tx.description.slice(0, 60)}`);
