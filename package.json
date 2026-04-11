@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "seed:categories": "tsx scripts/seed-categories.ts",
     "seed:crypto": "tsx scripts/seed-crypto.ts",
     "seed:bank": "tsx scripts/seed-bank.ts",
     "db:studio": "prisma studio",
