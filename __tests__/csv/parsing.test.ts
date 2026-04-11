@@ -67,13 +67,6 @@ describe("parseBinance (binance_transakce.csv)", () => {
     expect(rows.every((r) => r.quantity >= 0)).toBe(true);
   });
 
-  it("contains a SWAP row for ADA from Binance Convert", () => {
-    const row = rows.find((r) => r.type === "SWAP" && r.ticker === "ADA");
-    expect(row).toBeDefined();
-    expect(row!.date).toBe("2021-01-02");
-    expect(row!.quantity).toBeCloseTo(527.73154453, 5);
-  });
-
   it("does not contain P2P Trading rows", () => {
     // P2P Trading should be skipped entirely
     expect(rows.every((r) => r.type !== "DEPOSIT" || r.ticker !== "USDT")).toBe(true);
@@ -95,13 +88,6 @@ describe("parseBinance (binance_transakce_2.csv)", () => {
 
   it("returns at least one row", () => {
     expect(rows.length).toBeGreaterThan(0);
-  });
-
-  it("contains a DEPOSIT row for EUR", () => {
-    const row = rows.find((r) => r.type === "DEPOSIT" && r.ticker === "EUR");
-    expect(row).toBeDefined();
-    expect(row!.date).toBe("2022-01-21");
-    expect(row!.quantity).toBeCloseTo(39.28, 2);
   });
 
   it("contains BUY rows for BTC", () => {

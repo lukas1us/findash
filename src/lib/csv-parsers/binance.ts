@@ -12,17 +12,8 @@ interface BinanceRow {
   Remark: string;
 }
 
-const SKIP_OPERATIONS = new Set([
-  "p2p trading",
-  "transfer between",
-  "withdraw",
-  "transaction fee",
-  "transaction spend",
-]);
-
-function isReward(op: string): boolean {
-  return op.includes("interest") || op.includes("reward") || op.includes("savings distribution");
-}
+const BUY_OPS = new Set(["buy", "transaction buy"]);
+const SELL_OPS = new Set(["sell", "transaction sold"]);
 
 export function parseBinance(csvText: string): CryptoTxRow[] {
   const text = csvText.replace(/^\uFEFF/, "");
@@ -38,28 +29,19 @@ export function parseBinance(csvText: string): CryptoTxRow[] {
   const rows: CryptoTxRow[] = [];
 
   result.data.forEach((row, i) => {
-    const operation = (row.Operation ?? "").trim();
-    const opLower = operation.toLowerCase();
+    const opLower = (row.Operation ?? "").trim().toLowerCase();
     const ticker = (row.Coin ?? "").toUpperCase();
     const changeStr = row.Change ?? "0";
     const change = parseFloat(changeStr) || 0;
 
-    if (SKIP_OPERATIONS.has(opLower)) return;
-
     let type: CryptoTxType;
 
-    if (isReward(opLower)) {
-      type = "REWARD";
-    } else if (opLower === "deposit") {
-      type = "DEPOSIT";
-    } else if (opLower === "transaction buy" || opLower === "buy") {
+    if (BUY_OPS.has(opLower)) {
       type = "BUY";
-    } else if (opLower === "sell" || opLower === "transaction sold") {
+    } else if (SELL_OPS.has(opLower)) {
       type = "SELL";
-    } else if (opLower === "binance convert" || opLower === "transaction revenue") {
-      type = "SWAP";
     } else {
-      return; // unknown operation, skip
+      return; // discard everything else
     }
 
     // SELL records the outgoing crypto (negative Change); all others are incoming (positive)
