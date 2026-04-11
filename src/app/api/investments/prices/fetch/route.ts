@@ -17,6 +17,7 @@ const COINGECKO_IDS: Record<string, string> = {
   DOGE: "dogecoin",
   SHIB: "shiba-inu",
   CRO: "crypto-com-chain",
+  NIGHT: "midnight",
 };
 
 export async function POST() {
