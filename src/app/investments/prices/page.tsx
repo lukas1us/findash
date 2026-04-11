@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Plus, Gem } from "lucide-react";
@@ -32,7 +33,17 @@ export default function PricesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [newPrice, setNewPrice] = useState("");
+  const [priceUnit, setPriceUnit] = useState<"oz" | "g" | "kg">("oz");
   const [saving, setSaving] = useState(false);
+
+  const G_PER_OZ = 31.1035;
+  function toCzkPerOz(price: number, unit: "oz" | "g" | "kg"): number {
+    if (unit === "g")  return price * G_PER_OZ;
+    if (unit === "kg") return price / 1000 * G_PER_OZ;
+    return price;
+  }
+
+  const isGoldSilver = selectedAsset?.type === "GOLD_SILVER";
 
   const load = useCallback(() => {
     fetch("/api/investments/prices").then((r) => (r.ok ? r.json() : [])).then(setPrices).catch(() => {});
@@ -87,8 +98,8 @@ export default function PricesPage() {
 
   function openManualUpdate(asset: Asset) {
     setSelectedAsset(asset);
-    const current = prices.find((p) => p.assetId === asset.id);
-    setNewPrice(current ? String(current.price) : "");
+    setPriceUnit("oz");
+    setNewPrice("");
     setFormOpen(true);
   }
 
@@ -97,11 +108,25 @@ export default function PricesPage() {
     if (!selectedAsset) return;
     setSaving(true);
     try {
-      await fetch("/api/investments/prices", {
+      const priceToStore = isGoldSilver
+        ? toCzkPerOz(Number(newPrice), priceUnit)
+        : Number(newPrice);
+
+      const res = await fetch("/api/investments/prices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assetId: selectedAsset.id, price: Number(newPrice), source: "MANUAL" }),
+        body: JSON.stringify({
+          assetId: selectedAsset.id,
+          price: priceToStore,
+          date: new Date().toISOString(),
+          source: "MANUAL",
+        }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast({ title: "Chyba", description: data.error ?? `HTTP ${res.status}`, variant: "destructive" });
+        return;
+      }
       toast({ title: "Cena aktualizována" });
       setFormOpen(false);
       load();
@@ -194,25 +219,44 @@ export default function PricesPage() {
       </Card>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent>
+        <DialogContent aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>
               Aktualizace ceny — {selectedAsset?.name} ({selectedAsset?.ticker})
             </DialogTitle>
+            <DialogDescription>
+              Zadejte aktuální cenu aktiva v CZK.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleManualSave} className="space-y-4">
             <div className="space-y-2">
-              <Label>Nová cena (CZK)</Label>
-              <Input
-                type="number"
-                step="any"
-                min="0"
-                placeholder="0"
-                value={newPrice}
-                onChange={(e) => setNewPrice(e.target.value)}
-                required
-                autoFocus
-              />
+              <Label>
+                Nová cena (CZK{isGoldSilver ? `/${priceUnit}` : ""})
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  step="any"
+                  min="0"
+                  placeholder="0"
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  required
+                  autoFocus
+                />
+                {isGoldSilver && (
+                  <Select value={priceUnit} onValueChange={(v) => setPriceUnit(v as "oz" | "g" | "kg")}>
+                    <SelectTrigger className="w-20 shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="oz">oz</SelectItem>
+                      <SelectItem value="g">g</SelectItem>
+                      <SelectItem value="kg">kg</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Zrušit</Button>
