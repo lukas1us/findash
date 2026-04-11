@@ -27,22 +27,40 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "pricePerUnit is required" }, { status: 400 });
   }
 
+  const type: "BUY" | "SELL" = body.type === "SELL" ? "SELL" : "BUY";
+
   // Verify asset exists
   const asset = await prisma.asset.findUnique({ where: { id: body.assetId } });
   if (!asset) {
     return NextResponse.json({ error: "assetId does not exist" }, { status: 400 });
   }
 
+  const quantity = Number(body.quantity);
+  const pricePerUnit = Number(body.pricePerUnit);
+  const fees = Number(body.fees ?? 0);
+  const proceeds = quantity * pricePerUnit - fees;
+
   const purchase = await prisma.purchase.create({
     data: {
       assetId: body.assetId,
+      type,
       date: new Date(body.date),
-      quantity: Number(body.quantity),
-      pricePerUnit: Number(body.pricePerUnit),
-      fees: Number(body.fees ?? 0),
+      quantity,
+      pricePerUnit,
+      fees,
       notes: body.notes,
+      accountId: body.accountId ?? null,
     },
     include: { asset: true },
   });
+
+  // If a target account is specified and this is a sell, credit the proceeds
+  if (type === "SELL" && body.accountId) {
+    await prisma.account.update({
+      where: { id: body.accountId },
+      data: { balance: { increment: proceeds } },
+    });
+  }
+
   return NextResponse.json(purchase, { status: 201 });
 }

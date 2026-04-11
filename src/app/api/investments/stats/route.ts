@@ -17,9 +17,12 @@ export async function GET() {
   const allocationByType: Record<string, number> = {};
 
   const assetStats = assets.map((asset) => {
-    // Purchases (manual entries) — quantity always positive
-    const purchaseQty  = asset.purchases.reduce((s, p) => s + p.quantity, 0);
-    const purchaseCost = asset.purchases.reduce((s, p) => s + p.quantity * p.pricePerUnit + p.fees, 0);
+    // Purchases (manual entries) — BUY adds quantity, SELL subtracts
+    const purchaseQty  = asset.purchases.reduce((s, p) => s + (p.type === "SELL" ? -p.quantity : p.quantity), 0);
+    const purchaseCost = asset.purchases.reduce((s, p) => {
+      if (p.type === "SELL") return s; // realized; don't include in cost basis
+      return s + p.quantity * p.pricePerUnit + p.fees;
+    }, 0);
 
     // CSV-imported crypto transactions — quantity is signed (+receive / −spend)
     const ctQty = asset.cryptoTransactions.reduce((s, ct) => s + ct.quantity, 0);

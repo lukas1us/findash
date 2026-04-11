@@ -123,6 +123,11 @@ enum CryptoTxType {
   SWAP
 }
 
+enum PurchaseType {
+  BUY
+  SELL
+}
+
 model Asset {
   id                 String              @id @default(cuid())
   name               String
@@ -135,16 +140,18 @@ model Asset {
 }
 
 model Purchase {
-  id           String   @id @default(cuid())
+  id           String       @id @default(cuid())
   assetId      String
+  type         PurchaseType @default(BUY)
   date         DateTime
   quantity     Float
   pricePerUnit Float
-  fees         Float    @default(0)
+  fees         Float        @default(0)
   notes        String?
-  createdAt    DateTime @default(now())
+  accountId    String?
+  createdAt    DateTime     @default(now())
   externalId   String?
-  asset        Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  asset        Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@index([externalId])
 }
