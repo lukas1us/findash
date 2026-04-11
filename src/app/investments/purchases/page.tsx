@@ -115,23 +115,24 @@ export default function PurchasesPage() {
     setFormOpen(true);
   }
 
-  async function openSell(p: Purchase) {
-    const asset = assets.find((a) => a.id === p.assetId) ?? null;
+  async function openSell(assetId?: string) {
+    const asset = assets.find((a) => a.id === (assetId ?? "")) ?? null;
     setSellAsset(asset);
 
-    // Try to pre-fill current price from the asset's latest price
     let currentPrice = "";
-    try {
-      const r = await fetch(`/api/investments/assets/${p.assetId}/stats`);
-      if (r.ok) {
-        const stats = await r.json();
-        if (stats.currentPrice) currentPrice = String(stats.currentPrice);
-      }
-    } catch { /* ignore */ }
+    if (asset) {
+      try {
+        const r = await fetch(`/api/investments/assets/${asset.id}/stats`);
+        if (r.ok) {
+          const stats = await r.json();
+          if (stats.currentPrice) currentPrice = String(stats.currentPrice);
+        }
+      } catch { /* ignore */ }
+    }
 
     setSellForm({
       date: format(new Date(), "yyyy-MM-dd"),
-      quantity: String(p.quantity),
+      quantity: "",
       pricePerUnit: currentPrice,
       fees: "0",
       notes: "",
@@ -218,9 +219,14 @@ export default function PurchasesPage() {
           <h1 className="text-3xl font-bold">Nákupy</h1>
           <p className="text-muted-foreground">Historie nákupů a prodejů investičních aktiv</p>
         </div>
-        <Button onClick={openNew}>
-          <Plus className="mr-2 h-4 w-4" /> Nový nákup
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => openSell()}>
+            <TrendingDown className="mr-2 h-4 w-4" /> Prodat
+          </Button>
+          <Button onClick={openNew}>
+            <Plus className="mr-2 h-4 w-4" /> Nový nákup
+          </Button>
+        </div>
       </div>
 
       <Select value={filterAsset} onValueChange={setFilterAsset}>
@@ -276,17 +282,6 @@ export default function PurchasesPage() {
                   <TableCell className="text-muted-foreground text-sm">{p.notes ?? "—"}</TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-end">
-                      {p.type === "BUY" && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-green-600 hover:text-green-700"
-                          title="Prodat"
-                          onClick={() => openSell(p)}
-                        >
-                          <TrendingDown className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(p)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -427,6 +422,34 @@ export default function PurchasesPage() {
           </DialogHeader>
           <form onSubmit={handleSell} className="space-y-4">
             <div className="space-y-2">
+              <Label>Aktivum</Label>
+              <Select
+                value={sellAsset?.id ?? ""}
+                onValueChange={async (v) => {
+                  const asset = assets.find((a) => a.id === v) ?? null;
+                  setSellAsset(asset);
+                  let currentPrice = "";
+                  if (asset) {
+                    try {
+                      const r = await fetch(`/api/investments/assets/${asset.id}/stats`);
+                      if (r.ok) {
+                        const stats = await r.json();
+                        if (stats.currentPrice) currentPrice = String(stats.currentPrice);
+                      }
+                    } catch { /* ignore */ }
+                  }
+                  setSellForm((f) => ({ ...f, pricePerUnit: currentPrice }));
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Vyberte aktivum" /></SelectTrigger>
+                <SelectContent>
+                  {assets.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.name} ({a.ticker})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>Datum prodeje</Label>
               <Input
                 type="date"
@@ -510,7 +533,7 @@ export default function PurchasesPage() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setSellOpen(false)}>Zrušit</Button>
-              <Button type="submit" disabled={sellSaving} variant="destructive">
+              <Button type="submit" disabled={sellSaving || !sellAsset} variant="destructive">
                 {sellSaving ? "Ukládám…" : "Prodat"}
               </Button>
             </DialogFooter>
