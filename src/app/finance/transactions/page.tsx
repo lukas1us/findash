@@ -85,7 +85,7 @@ export default function TransactionsPage() {
         <div className="flex gap-2">
           <Button variant="outline" asChild>
             <Link href="/finance/transactions/import">
-              <Upload className="mr-2 h-4 w-4" /> Import CSV
+              <Upload className="mr-2 h-4 w-4" /> Import
             </Link>
           </Button>
           <Button onClick={() => { setEditTx(null); setFormOpen(true); }}>

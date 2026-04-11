@@ -279,7 +279,7 @@ export default function ImportPage() {
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
-        <h1 className="text-3xl font-bold">Import CSV</h1>
+        <h1 className="text-3xl font-bold">Import</h1>
         <p className="text-muted-foreground">Nahrát výpis z banky nebo kryptoměnové burzy</p>
       </div>
 
