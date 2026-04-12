@@ -22,26 +22,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
-
-const financeLinks = [
-  { href: "/finance", label: "Přehled", icon: LayoutDashboard },
-  { href: "/finance/transactions", label: "Transakce", icon: ArrowLeftRight },
-  { href: "/finance/budgets", label: "Rozpočty", icon: Target },
-  { href: "/finance/accounts", label: "Účty", icon: Wallet },
-  { href: "/finance/import", label: "Import", icon: Upload },
-];
-
-const overviewLinks = [
-  { href: "/net-worth", label: "Net Worth", icon: LineChart },
-];
-
-const investmentLinks = [
-  { href: "/investments", label: "Přehled", icon: TrendingUp },
-  { href: "/investments/assets", label: "Aktiva", icon: Package },
-  { href: "/investments/purchases", label: "Nákupy", icon: ShoppingCart },
-  { href: "/investments/prices", label: "Ceny", icon: DollarSign },
-  { href: "/investments/import", label: "Import", icon: Upload },
-];
+import { LanguageToggle } from "@/components/language-toggle";
+import { useTranslation } from "@/lib/i18n/context";
 
 function NavSection({
   title,
@@ -50,7 +32,7 @@ function NavSection({
   onLinkClick,
 }: {
   title: string;
-  links: typeof financeLinks;
+  links: { href: string; label: string; icon: React.ElementType }[];
   pathname: string;
   onLinkClick?: () => void;
 }) {
@@ -88,6 +70,27 @@ function NavSection({
 export function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { t } = useTranslation();
+
+  const financeLinks = [
+    { href: "/finance", label: t("sidebar.financeOverview"), icon: LayoutDashboard },
+    { href: "/finance/transactions", label: t("sidebar.transactions"), icon: ArrowLeftRight },
+    { href: "/finance/budgets", label: t("sidebar.budgets"), icon: Target },
+    { href: "/finance/accounts", label: t("sidebar.accounts"), icon: Wallet },
+    { href: "/finance/import", label: t("sidebar.import"), icon: Upload },
+  ];
+
+  const overviewLinks = [
+    { href: "/net-worth", label: t("sidebar.netWorth"), icon: LineChart },
+  ];
+
+  const investmentLinks = [
+    { href: "/investments", label: t("sidebar.investmentsOverview"), icon: TrendingUp },
+    { href: "/investments/assets", label: t("sidebar.assets"), icon: Package },
+    { href: "/investments/purchases", label: t("sidebar.purchases"), icon: ShoppingCart },
+    { href: "/investments/prices", label: t("sidebar.prices"), icon: DollarSign },
+    { href: "/investments/import", label: t("sidebar.import"), icon: Upload },
+  ];
 
   const sidebarContent = (
     <div className="flex h-full min-h-0 flex-col py-6 px-3">
@@ -98,25 +101,26 @@ export function Sidebar() {
       <Separator className="my-6 shrink-0" />
       <nav className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto">
         <NavSection
-          title="Finance"
+          title={t("sidebar.financeSection")}
           links={financeLinks}
           pathname={pathname}
           onLinkClick={() => setMobileOpen(false)}
         />
         <NavSection
-          title="Přehled"
+          title={t("sidebar.overviewSection")}
           links={overviewLinks}
           pathname={pathname}
           onLinkClick={() => setMobileOpen(false)}
         />
         <NavSection
-          title="Investice"
+          title={t("sidebar.investmentsSection")}
           links={investmentLinks}
           pathname={pathname}
           onLinkClick={() => setMobileOpen(false)}
         />
       </nav>
       <ThemeToggle />
+      <LanguageToggle />
     </div>
   );
 

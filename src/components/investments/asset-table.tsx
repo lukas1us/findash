@@ -1,10 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatPercent, formatNumber } from "@/lib/formatters";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface AssetRow {
   id: string;
@@ -20,12 +21,6 @@ interface AssetRow {
   pnlPct: number;
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  CRYPTO: "Krypto",
-  REAL_ESTATE: "Nemovitosti",
-  GOLD_SILVER: "Zlato/Stříbro",
-  OTHER: "Ostatní",
-};
 const TYPE_COLORS: Record<string, string> = {
   CRYPTO: "bg-amber-500/20 text-amber-700 dark:text-amber-400",
   REAL_ESTATE: "bg-blue-500/20 text-blue-700 dark:text-blue-400",
@@ -34,21 +29,30 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export function AssetTable({ assets }: { assets: AssetRow[] }) {
+  const { t } = useTranslation();
+
+  const TYPE_LABELS = useMemo(() => ({
+    CRYPTO: t("investments.assetTableComponent.types.CRYPTO"),
+    REAL_ESTATE: t("investments.assetTableComponent.types.REAL_ESTATE"),
+    GOLD_SILVER: t("investments.assetTableComponent.types.GOLD_SILVER"),
+    OTHER: t("investments.assetTableComponent.types.OTHER"),
+  }), [t]);
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Aktiva</CardTitle>
+        <CardTitle className="text-base">{t("investments.assetTableComponent.title")}</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Aktivum</TableHead>
-              <TableHead className="text-right">Množství</TableHead>
-              <TableHead className="text-right">Prům. nákup</TableHead>
-              <TableHead className="text-right">Aktuální cena</TableHead>
-              <TableHead className="text-right">Hodnota</TableHead>
-              <TableHead className="text-right">P&L</TableHead>
+              <TableHead>{t("investments.assetTableComponent.asset")}</TableHead>
+              <TableHead className="text-right">{t("investments.assetTableComponent.quantity")}</TableHead>
+              <TableHead className="text-right">{t("investments.assetTableComponent.avgBuy")}</TableHead>
+              <TableHead className="text-right">{t("investments.assetTableComponent.currentPrice")}</TableHead>
+              <TableHead className="text-right">{t("investments.assetTableComponent.value")}</TableHead>
+              <TableHead className="text-right">{t("investments.assetTableComponent.pnl")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -60,7 +64,7 @@ export function AssetTable({ assets }: { assets: AssetRow[] }) {
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs text-muted-foreground">{a.ticker}</span>
                       <span className={`text-xs rounded px-1.5 py-0.5 font-medium ${TYPE_COLORS[a.type]}`}>
-                        {TYPE_LABELS[a.type] ?? a.type}
+                        {TYPE_LABELS[a.type as keyof typeof TYPE_LABELS] ?? a.type}
                       </span>
                     </div>
                   </div>
@@ -83,7 +87,7 @@ export function AssetTable({ assets }: { assets: AssetRow[] }) {
             {assets.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                  Žádná aktiva
+                  {t("investments.assetTableComponent.noAssets")}
                 </TableCell>
               </TableRow>
             )}

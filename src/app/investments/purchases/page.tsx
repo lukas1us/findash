@@ -14,6 +14,7 @@ import { Plus, Pencil, Trash2, TrendingDown } from "lucide-react";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/formatters";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
+import { useTranslation } from "@/lib/i18n/context";
 
 type WeightUnit = "oz" | "g" | "kg";
 
@@ -48,6 +49,7 @@ interface Purchase {
 
 export default function PurchasesPage() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -162,11 +164,11 @@ export default function PurchasesPage() {
           fees: Number(form.fees),
         }),
       });
-      toast({ title: "Nákup uložen" });
+      toast({ title: t("investments.purchases.purchaseSaved") });
       setFormOpen(false);
       load();
     } catch {
-      toast({ title: "Chyba", variant: "destructive" });
+      toast({ title: t("common.error"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -192,20 +194,20 @@ export default function PurchasesPage() {
         }),
       });
       if (!res.ok) throw new Error();
-      toast({ title: "Prodej zaznamenán" });
+      toast({ title: t("investments.purchases.sellRecorded") });
       setSellOpen(false);
       load();
     } catch {
-      toast({ title: "Chyba při prodeji", variant: "destructive" });
+      toast({ title: t("investments.purchases.sellFailed"), variant: "destructive" });
     } finally {
       setSellSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Smazat záznam?")) return;
+    if (!confirm(t("investments.purchases.deleteConfirm"))) return;
     await fetch(`/api/investments/purchases/${id}`, { method: "DELETE" });
-    toast({ title: "Záznam smazán" });
+    toast({ title: t("investments.purchases.recordDeleted") });
     load();
   }
 
@@ -216,25 +218,25 @@ export default function PurchasesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Nákupy</h1>
-          <p className="text-muted-foreground">Historie nákupů a prodejů investičních aktiv</p>
+          <h1 className="text-3xl font-bold">{t("investments.purchases.title")}</h1>
+          <p className="text-muted-foreground">{t("investments.purchases.subtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => openSell()}>
-            <TrendingDown className="mr-2 h-4 w-4" /> Prodat
+            <TrendingDown className="mr-2 h-4 w-4" /> {t("investments.purchases.sell")}
           </Button>
           <Button onClick={openNew}>
-            <Plus className="mr-2 h-4 w-4" /> Nový nákup
+            <Plus className="mr-2 h-4 w-4" /> {t("investments.purchases.newPurchase")}
           </Button>
         </div>
       </div>
 
       <Select value={filterAsset} onValueChange={setFilterAsset}>
         <SelectTrigger className="w-52">
-          <SelectValue placeholder="Filtr dle aktiva" />
+          <SelectValue placeholder={t("investments.purchases.filterByAsset")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Všechna aktiva</SelectItem>
+          <SelectItem value="all">{t("investments.purchases.allAssets")}</SelectItem>
           {assets.map((a) => (
             <SelectItem key={a.id} value={a.id}>{a.name} ({a.ticker})</SelectItem>
           ))}
@@ -246,14 +248,14 @@ export default function PurchasesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Datum</TableHead>
-                <TableHead>Typ</TableHead>
-                <TableHead>Aktivum</TableHead>
-                <TableHead className="text-right">Množství</TableHead>
-                <TableHead className="text-right">Cena/ks</TableHead>
-                <TableHead className="text-right">Poplatky</TableHead>
-                <TableHead className="text-right">Celkem</TableHead>
-                <TableHead>Poznámka</TableHead>
+                <TableHead>{t("investments.purchases.date")}</TableHead>
+                <TableHead>{t("investments.purchases.type")}</TableHead>
+                <TableHead>{t("investments.purchases.asset")}</TableHead>
+                <TableHead className="text-right">{t("investments.purchases.quantity")}</TableHead>
+                <TableHead className="text-right">{t("investments.purchases.pricePerUnit")}</TableHead>
+                <TableHead className="text-right">{t("investments.purchases.fees")}</TableHead>
+                <TableHead className="text-right">{t("investments.purchases.total")}</TableHead>
+                <TableHead>{t("investments.purchases.notes")}</TableHead>
                 <TableHead className="w-28"></TableHead>
               </TableRow>
             </TableHeader>
@@ -263,7 +265,7 @@ export default function PurchasesPage() {
                   <TableCell className="text-muted-foreground">{formatDate(p.date)}</TableCell>
                   <TableCell>
                     <Badge variant={p.type === "SELL" ? "destructive" : "secondary"}>
-                      {p.type === "SELL" ? "Prodej" : "Nákup"}
+                      {p.type === "SELL" ? t("investments.purchases.sellLabel") : t("investments.purchases.buyLabel")}
                     </Badge>
                   </TableCell>
                   <TableCell className="font-medium">
@@ -300,7 +302,7 @@ export default function PurchasesPage() {
               {purchases.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                    Žádné záznamy
+                    {t("investments.purchases.noRecords")}
                   </TableCell>
                 </TableRow>
               )}
@@ -313,17 +315,17 @@ export default function PurchasesPage() {
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editPurchase ? "Upravit záznam" : "Nový nákup"}</DialogTitle>
+            <DialogTitle>{editPurchase ? t("investments.purchases.editRecord") : t("investments.purchases.newPurchaseTitle")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
             <div className="space-y-2">
-              <Label>Aktivum</Label>
+              <Label>{t("investments.purchases.asset")}</Label>
               <Select
                 value={form.assetId}
                 onValueChange={(v) => setForm((f) => ({ ...f, assetId: v }))}
                 disabled={!!editPurchase}
               >
-                <SelectTrigger><SelectValue placeholder="Vyberte aktivum" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("investments.purchases.selectAsset")} /></SelectTrigger>
                 <SelectContent>
                   {assets.map((a) => (
                     <SelectItem key={a.id} value={a.id}>{a.name} ({a.ticker})</SelectItem>
@@ -332,7 +334,7 @@ export default function PurchasesPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Datum nákupu</Label>
+              <Label>{t("investments.purchases.purchaseDate")}</Label>
               <Input
                 type="date"
                 value={form.date}
@@ -342,7 +344,7 @@ export default function PurchasesPage() {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
-                <Label>Množství</Label>
+                <Label>{t("investments.purchases.amountField")}</Label>
                 <div className="flex gap-1">
                   <Input
                     type="number"
@@ -369,7 +371,7 @@ export default function PurchasesPage() {
               </div>
               <div className="space-y-2">
                 <Label>
-                  Cena/ks (CZK{isGoldSilver && !editPurchase ? `/${unit}` : ""})
+                  {t("investments.purchases.priceCzk")}{isGoldSilver && !editPurchase ? `/${unit}` : ""}
                 </Label>
                 <Input
                   type="number"
@@ -382,7 +384,7 @@ export default function PurchasesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Poplatky (CZK)</Label>
+                <Label>{t("investments.purchases.feesCzk")}</Label>
                 <Input
                   type="number"
                   step="any"
@@ -394,18 +396,18 @@ export default function PurchasesPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Poznámka (volitelná)</Label>
+              <Label>{t("investments.purchases.noteOptional")}</Label>
               <Textarea
-                placeholder="Poznámka k nákupu"
+                placeholder={t("investments.purchases.notePlaceholder")}
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                 rows={2}
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Zrušit</Button>
+              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>{t("common.cancel")}</Button>
               <Button type="submit" disabled={saving || !form.assetId}>
-                {saving ? "Ukládám…" : "Uložit"}
+                {saving ? t("common.saving") : t("common.save")}
               </Button>
             </DialogFooter>
           </form>
@@ -417,12 +419,12 @@ export default function PurchasesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Prodat — {sellAsset?.name} ({sellAsset?.ticker})
+              {t("investments.purchases.sellTitle")} — {sellAsset?.name} ({sellAsset?.ticker})
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSell} className="space-y-4">
             <div className="space-y-2">
-              <Label>Aktivum</Label>
+              <Label>{t("investments.purchases.asset")}</Label>
               <Select
                 value={sellAsset?.id ?? ""}
                 onValueChange={async (v) => {
@@ -441,7 +443,7 @@ export default function PurchasesPage() {
                   setSellForm((f) => ({ ...f, pricePerUnit: currentPrice }));
                 }}
               >
-                <SelectTrigger><SelectValue placeholder="Vyberte aktivum" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("investments.purchases.selectAsset")} /></SelectTrigger>
                 <SelectContent>
                   {assets.map((a) => (
                     <SelectItem key={a.id} value={a.id}>{a.name} ({a.ticker})</SelectItem>
@@ -450,7 +452,7 @@ export default function PurchasesPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Datum prodeje</Label>
+              <Label>{t("investments.purchases.sellDate")}</Label>
               <Input
                 type="date"
                 value={sellForm.date}
@@ -460,7 +462,7 @@ export default function PurchasesPage() {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
-                <Label>Množství</Label>
+                <Label>{t("investments.purchases.sellQuantity")}</Label>
                 <Input
                   type="number"
                   step="any"
@@ -472,7 +474,7 @@ export default function PurchasesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Cena/ks (CZK)</Label>
+                <Label>{t("investments.purchases.sellPrice")}</Label>
                 <Input
                   type="number"
                   step="any"
@@ -484,7 +486,7 @@ export default function PurchasesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Poplatky (CZK)</Label>
+                <Label>{t("investments.purchases.feesCzk")}</Label>
                 <Input
                   type="number"
                   step="any"
@@ -498,19 +500,19 @@ export default function PurchasesPage() {
 
             {sellForm.quantity && sellForm.pricePerUnit && (
               <p className="text-sm text-muted-foreground">
-                Výnos z prodeje:{" "}
+                {t("investments.purchases.proceeds")}{" "}
                 <span className="font-medium text-green-600">{formatCurrency(sellProceeds)}</span>
               </p>
             )}
 
             <div className="space-y-2">
-              <Label>Přidat výnos na účet (volitelné)</Label>
+              <Label>{t("investments.purchases.creditAccount")}</Label>
               <Select
                 value={sellForm.accountId}
                 onValueChange={(v) => setSellForm((f) => ({ ...f, accountId: v }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Nevybráno — pouze zaznamenat prodej" />
+                  <SelectValue placeholder={t("investments.purchases.selectAccountOptional")} />
                 </SelectTrigger>
                 <SelectContent>
                   {accounts.map((a) => (
@@ -523,18 +525,18 @@ export default function PurchasesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Poznámka (volitelná)</Label>
+              <Label>{t("investments.purchases.noteOptional")}</Label>
               <Textarea
-                placeholder="Poznámka k prodeji"
+                placeholder={t("investments.purchases.notePlaceholder")}
                 value={sellForm.notes}
                 onChange={(e) => setSellForm((f) => ({ ...f, notes: e.target.value }))}
                 rows={2}
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setSellOpen(false)}>Zrušit</Button>
+              <Button type="button" variant="outline" onClick={() => setSellOpen(false)}>{t("common.cancel")}</Button>
               <Button type="submit" disabled={sellSaving || !sellAsset} variant="destructive">
-                {sellSaving ? "Ukládám…" : "Prodat"}
+                {sellSaving ? t("common.saving") : t("investments.purchases.sell")}
               </Button>
             </DialogFooter>
           </form>

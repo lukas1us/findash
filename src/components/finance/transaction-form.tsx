@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface Category { id: string; name: string; type: string }
 interface Account { id: string; name: string }
@@ -30,6 +31,7 @@ interface Props {
 
 export function TransactionForm({ open, onClose, onSaved, transaction }: Props) {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [form, setForm] = useState({
@@ -84,12 +86,12 @@ export function TransactionForm({ open, onClose, onSaved, transaction }: Props) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, amount: Number(form.amount) }),
       });
-      if (!res.ok) throw new Error("Chyba při ukládání");
-      toast({ title: transaction ? "Transakce upravena" : "Transakce přidána" });
+      if (!res.ok) throw new Error("save failed");
+      toast({ title: transaction ? t("finance.transactionForm.transactionEdited") : t("finance.transactionForm.transactionAdded") });
       onSaved();
       onClose();
     } catch {
-      toast({ title: "Chyba", description: "Nepodařilo se uložit transakci", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("finance.transactionForm.saveFailed"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -99,25 +101,25 @@ export function TransactionForm({ open, onClose, onSaved, transaction }: Props) 
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{transaction ? "Upravit transakci" : "Nová transakce"}</DialogTitle>
+          <DialogTitle>{transaction ? t("finance.transactionForm.editTransaction") : t("finance.transactionForm.newTransaction")}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Typ</Label>
+              <Label>{t("finance.transactionForm.type")}</Label>
               <Select
                 value={form.type}
                 onValueChange={(v) => setForm((f) => ({ ...f, type: v as "INCOME" | "EXPENSE", categoryId: "" }))}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="INCOME">Příjem</SelectItem>
-                  <SelectItem value="EXPENSE">Výdaj</SelectItem>
+                  <SelectItem value="INCOME">{t("finance.transactionForm.income")}</SelectItem>
+                  <SelectItem value="EXPENSE">{t("finance.transactionForm.expense")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Datum</Label>
+              <Label>{t("finance.transactionForm.date")}</Label>
               <Input
                 type="date"
                 value={form.date}
@@ -128,7 +130,7 @@ export function TransactionForm({ open, onClose, onSaved, transaction }: Props) 
           </div>
 
           <div className="space-y-2">
-            <Label>Částka (CZK)</Label>
+            <Label>{t("finance.transactionForm.amountCzk")}</Label>
             <Input
               type="number"
               min="0"
@@ -141,12 +143,12 @@ export function TransactionForm({ open, onClose, onSaved, transaction }: Props) 
           </div>
 
           <div className="space-y-2">
-            <Label>Účet</Label>
+            <Label>{t("finance.transactionForm.account")}</Label>
             <Select
               value={form.accountId}
               onValueChange={(v) => setForm((f) => ({ ...f, accountId: v }))}
             >
-              <SelectTrigger><SelectValue placeholder="Vyberte účet" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("finance.transactionForm.selectAccount")} /></SelectTrigger>
               <SelectContent>
                 {accounts.map((a) => (
                   <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
@@ -156,12 +158,12 @@ export function TransactionForm({ open, onClose, onSaved, transaction }: Props) 
           </div>
 
           <div className="space-y-2">
-            <Label>Kategorie</Label>
+            <Label>{t("finance.transactionForm.category")}</Label>
             <Select
               value={form.categoryId}
               onValueChange={(v) => setForm((f) => ({ ...f, categoryId: v }))}
             >
-              <SelectTrigger><SelectValue placeholder="Vyberte kategorii" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("finance.transactionForm.selectCategory")} /></SelectTrigger>
               <SelectContent>
                 {filteredCategories.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -171,18 +173,18 @@ export function TransactionForm({ open, onClose, onSaved, transaction }: Props) 
           </div>
 
           <div className="space-y-2">
-            <Label>Popis (volitelný)</Label>
+            <Label>{t("finance.transactionForm.descriptionOptional")}</Label>
             <Input
-              placeholder="Popis transakce"
+              placeholder={t("finance.transactionForm.descriptionPlaceholder")}
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
             />
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Zrušit</Button>
+            <Button type="button" variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
             <Button type="submit" disabled={saving || !form.accountId || !form.categoryId}>
-              {saving ? "Ukládám…" : "Uložit"}
+              {saving ? t("common.saving") : t("common.save")}
             </Button>
           </DialogFooter>
         </form>

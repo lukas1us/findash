@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface Transaction {
   id: string;
@@ -19,6 +20,7 @@ interface Transaction {
 }
 
 export function RecentTransactions() {
+  const { t } = useTranslation();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
@@ -34,50 +36,50 @@ export function RecentTransactions() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Poslední transakce</CardTitle>
+        <CardTitle className="text-base">{t("finance.recentTransactions.title")}</CardTitle>
         <Button variant="outline" size="sm" asChild>
-          <Link href="/finance/transactions">Zobrazit vše</Link>
+          <Link href="/finance/transactions">{t("finance.recentTransactions.viewAll")}</Link>
         </Button>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Datum</TableHead>
-              <TableHead>Popis</TableHead>
-              <TableHead>Kategorie</TableHead>
-              <TableHead>Účet</TableHead>
-              <TableHead className="text-right">Částka</TableHead>
+              <TableHead>{t("finance.recentTransactions.date")}</TableHead>
+              <TableHead>{t("finance.recentTransactions.description")}</TableHead>
+              <TableHead>{t("finance.recentTransactions.category")}</TableHead>
+              <TableHead>{t("finance.recentTransactions.account")}</TableHead>
+              <TableHead className="text-right">{t("finance.recentTransactions.amount")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.map((t) => (
-              <TableRow key={t.id}>
-                <TableCell className="text-muted-foreground">{formatDate(t.date)}</TableCell>
-                <TableCell>{t.description ?? "—"}</TableCell>
+            {transactions.map((tx) => (
+              <TableRow key={tx.id}>
+                <TableCell className="text-muted-foreground">{formatDate(tx.date)}</TableCell>
+                <TableCell>{tx.description ?? "—"}</TableCell>
                 <TableCell>
                   <span
                     className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-white"
-                    style={{ backgroundColor: t.category.color }}
+                    style={{ backgroundColor: tx.category.color }}
                   >
-                    {t.category.name}
+                    {tx.category.name}
                   </span>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{t.account.name}</TableCell>
+                <TableCell className="text-muted-foreground">{tx.account.name}</TableCell>
                 <TableCell
                   className={`text-right font-medium ${
-                    t.type === "INCOME" ? "text-green-600" : "text-red-600"
+                    tx.type === "INCOME" ? "text-green-600" : "text-red-600"
                   }`}
                 >
-                  {t.type === "INCOME" ? "+" : "−"}
-                  {formatCurrency(t.amount)}
+                  {tx.type === "INCOME" ? "+" : "−"}
+                  {formatCurrency(tx.amount)}
                 </TableCell>
               </TableRow>
             ))}
             {transactions.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  Žádné transakce
+                  {t("finance.recentTransactions.noTransactions")}
                 </TableCell>
               </TableRow>
             )}

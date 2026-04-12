@@ -11,6 +11,7 @@ import { TransactionForm } from "@/components/finance/transaction-form";
 import { useToast } from "@/components/ui/use-toast";
 import { format, subMonths } from "date-fns";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface Transaction {
   id: string;
@@ -25,7 +26,6 @@ interface Transaction {
 }
 interface Category { id: string; name: string }
 
-// Generate last 12 months options
 function getMonthOptions() {
   const options = [];
   for (let i = 0; i < 12; i++) {
@@ -37,6 +37,7 @@ function getMonthOptions() {
 
 export default function TransactionsPage() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [filterMonth, setFilterMonth] = useState(format(new Date(), "yyyy-MM"));
@@ -66,30 +67,30 @@ export default function TransactionsPage() {
   }, []);
 
   async function handleDelete(id: string) {
-    if (!confirm("Smazat transakci?")) return;
+    if (!confirm(t("finance.transactions.deleteConfirm"))) return;
     await fetch(`/api/finance/transactions/${id}`, { method: "DELETE" });
-    toast({ title: "Transakce smazána" });
+    toast({ title: t("finance.transactions.deleted") });
     load();
   }
 
-  const totalIncome = transactions.filter((t) => t.type === "INCOME").reduce((s, t) => s + t.amount, 0);
-  const totalExpense = transactions.filter((t) => t.type === "EXPENSE").reduce((s, t) => s + t.amount, 0);
+  const totalIncome = transactions.filter((tx) => tx.type === "INCOME").reduce((s, tx) => s + tx.amount, 0);
+  const totalExpense = transactions.filter((tx) => tx.type === "EXPENSE").reduce((s, tx) => s + tx.amount, 0);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Transakce</h1>
-          <p className="text-muted-foreground">Správa příjmů a výdajů</p>
+          <h1 className="text-3xl font-bold">{t("finance.transactions.title")}</h1>
+          <p className="text-muted-foreground">{t("finance.transactions.subtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
             <Link href="/finance/transactions/import">
-              <Upload className="mr-2 h-4 w-4" /> Import
+              <Upload className="mr-2 h-4 w-4" /> {t("common.import")}
             </Link>
           </Button>
           <Button onClick={() => { setEditTx(null); setFormOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" /> Nová transakce
+            <Plus className="mr-2 h-4 w-4" /> {t("finance.transactions.addTransaction")}
           </Button>
         </div>
       </div>
@@ -98,7 +99,7 @@ export default function TransactionsPage() {
       <div className="flex flex-wrap gap-3">
         <Select value={filterMonth} onValueChange={setFilterMonth}>
           <SelectTrigger className="w-44">
-            <SelectValue placeholder="Měsíc" />
+            <SelectValue placeholder={t("finance.transactions.monthPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {monthOptions.map((o) => (
@@ -109,10 +110,10 @@ export default function TransactionsPage() {
 
         <Select value={filterCategory} onValueChange={setFilterCategory}>
           <SelectTrigger className="w-44">
-            <SelectValue placeholder="Kategorie" />
+            <SelectValue placeholder={t("finance.transactions.category")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Všechny kategorie</SelectItem>
+            <SelectItem value="all">{t("finance.transactions.allCategories")}</SelectItem>
             {categories.map((c) => (
               <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
             ))}
@@ -124,9 +125,9 @@ export default function TransactionsPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Vše</SelectItem>
-            <SelectItem value="INCOME">Příjmy</SelectItem>
-            <SelectItem value="EXPENSE">Výdaje</SelectItem>
+            <SelectItem value="all">{t("finance.transactions.allTypes")}</SelectItem>
+            <SelectItem value="INCOME">{t("finance.transactions.income")}</SelectItem>
+            <SelectItem value="EXPENSE">{t("finance.transactions.expenses")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -135,19 +136,19 @@ export default function TransactionsPage() {
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-muted-foreground">Příjmy</p>
+            <p className="text-sm text-muted-foreground">{t("finance.transactions.income")}</p>
             <p className="text-xl font-bold text-green-600">{formatCurrency(totalIncome)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-muted-foreground">Výdaje</p>
+            <p className="text-sm text-muted-foreground">{t("finance.transactions.expenses")}</p>
             <p className="text-xl font-bold text-red-600">{formatCurrency(totalExpense)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-sm text-muted-foreground">Bilance</p>
+            <p className="text-sm text-muted-foreground">{t("finance.overview.balance")}</p>
             <p className={`text-xl font-bold ${totalIncome - totalExpense >= 0 ? "text-blue-600" : "text-red-600"}`}>
               {formatCurrency(totalIncome - totalExpense)}
             </p>
@@ -158,39 +159,39 @@ export default function TransactionsPage() {
       {/* Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{transactions.length} transakcí</CardTitle>
+          <CardTitle className="text-base">{transactions.length} {t("finance.transactions.title").toLowerCase()}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Datum</TableHead>
-                <TableHead>Popis</TableHead>
-                <TableHead>Kategorie</TableHead>
-                <TableHead>Účet</TableHead>
-                <TableHead className="text-right">Částka</TableHead>
+                <TableHead>{t("finance.transactions.date")}</TableHead>
+                <TableHead>{t("finance.transactions.description")}</TableHead>
+                <TableHead>{t("finance.transactions.category")}</TableHead>
+                <TableHead>{t("finance.transactions.account")}</TableHead>
+                <TableHead className="text-right">{t("finance.transactions.amount")}</TableHead>
                 <TableHead className="w-20"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell className="text-muted-foreground">{formatDate(t.date)}</TableCell>
-                  <TableCell>{t.description ?? "—"}</TableCell>
+              {transactions.map((tx) => (
+                <TableRow key={tx.id}>
+                  <TableCell className="text-muted-foreground">{formatDate(tx.date)}</TableCell>
+                  <TableCell>{tx.description ?? "—"}</TableCell>
                   <TableCell>
                     <span
                       className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white"
-                      style={{ backgroundColor: t.category.color }}
+                      style={{ backgroundColor: tx.category.color }}
                     >
-                      {t.category.name}
+                      {tx.category.name}
                     </span>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{t.account.name}</TableCell>
+                  <TableCell className="text-muted-foreground">{tx.account.name}</TableCell>
                   <TableCell
-                    className={`text-right font-medium ${t.type === "INCOME" ? "text-green-600" : "text-red-600"}`}
+                    className={`text-right font-medium ${tx.type === "INCOME" ? "text-green-600" : "text-red-600"}`}
                   >
-                    {t.type === "INCOME" ? "+" : "−"}
-                    {formatCurrency(t.amount)}
+                    {tx.type === "INCOME" ? "+" : "−"}
+                    {formatCurrency(tx.amount)}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1 justify-end">
@@ -198,7 +199,7 @@ export default function TransactionsPage() {
                         size="icon"
                         variant="ghost"
                         className="h-8 w-8"
-                        onClick={() => { setEditTx(t); setFormOpen(true); }}
+                        onClick={() => { setEditTx(tx); setFormOpen(true); }}
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -206,7 +207,7 @@ export default function TransactionsPage() {
                         size="icon"
                         variant="ghost"
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => handleDelete(t.id)}
+                        onClick={() => handleDelete(tx.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -217,7 +218,7 @@ export default function TransactionsPage() {
               {transactions.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    Žádné transakce pro zvolený filtr
+                    {t("finance.transactions.noTransactions")}
                   </TableCell>
                 </TableRow>
               )}

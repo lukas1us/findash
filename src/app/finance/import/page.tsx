@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Upload, CheckCircle2, AlertTriangle } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface Account {
   id: string;
@@ -19,11 +20,6 @@ interface Account {
 
 type BankFormat = "airbank" | "revolut" | "generic";
 
-const BANK_LABELS: Record<BankFormat, string> = {
-  airbank: "Air Bank",
-  revolut: "Revolut",
-  generic: "Generický (auto-detect)",
-};
 
 type ImportResult = {
   imported: number;
@@ -34,6 +30,7 @@ type ImportResult = {
 type FileType = "csv" | "pdf";
 
 export default function FinanceImportPage() {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -45,6 +42,12 @@ export default function FinanceImportPage() {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+
+  const BANK_LABELS = useMemo((): Record<BankFormat, string> => ({
+    airbank: "Air Bank",
+    revolut: "Revolut",
+    generic: t("finance.importPage.genericFormat"),
+  }), [t]);
 
   useEffect(() => {
     fetch("/api/finance/accounts")
@@ -80,7 +83,7 @@ export default function FinanceImportPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? `Chyba ${res.status}`);
+        setError(data.error ?? `${t("common.error")} ${res.status}`);
         return;
       }
 
@@ -97,9 +100,9 @@ export default function FinanceImportPage() {
   return (
     <div className="space-y-6 max-w-xl">
       <div>
-        <h1 className="text-3xl font-bold">Import bankovního výpisu</h1>
+        <h1 className="text-3xl font-bold">{t("finance.importPage.title")}</h1>
         <p className="text-muted-foreground">
-          Importujte transakce z PDF nebo CSV výpisu přímo do vybraného účtu
+          {t("finance.importPage.subtitle")}
         </p>
       </div>
 
@@ -108,18 +111,18 @@ export default function FinanceImportPage() {
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Typ souboru</label>
           <div className="flex rounded-md border overflow-hidden">
-            {(["pdf", "csv"] as FileType[]).map((t) => (
+            {(["pdf", "csv"] as FileType[]).map((ft) => (
               <button
-                key={t}
+                key={ft}
                 type="button"
-                onClick={() => { setFileType(t); setSelectedFile(null); setResult(null); setError(null); }}
+                onClick={() => { setFileType(ft); setSelectedFile(null); setResult(null); setError(null); }}
                 className={`flex-1 py-2 text-sm font-medium transition-colors
-                  ${fileType === t
+                  ${fileType === ft
                     ? "bg-primary text-primary-foreground"
                     : "bg-background text-muted-foreground hover:bg-accent"
                   }`}
               >
-                {t.toUpperCase()}
+                {ft.toUpperCase()}
               </button>
             ))}
           </div>
@@ -128,7 +131,7 @@ export default function FinanceImportPage() {
         {/* Bank selector — only for CSV */}
         {fileType === "csv" && (
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">Formát banky</label>
+            <label className="text-sm font-medium">{t("finance.importPage.bankFormat")}</label>
             <Select value={bank} onValueChange={(v) => setBank(v as BankFormat)}>
               <SelectTrigger>
                 <SelectValue />
@@ -146,10 +149,10 @@ export default function FinanceImportPage() {
 
         {/* Account selector */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">Cílový účet *</label>
+          <label className="text-sm font-medium">{t("finance.transactionImport.targetAccount")}</label>
           <Select value={accountId} onValueChange={setAccountId}>
             <SelectTrigger>
-              <SelectValue placeholder="Vyberte účet…" />
+              <SelectValue placeholder={t("finance.transactionImport.selectAccount") + "…"} />
             </SelectTrigger>
             <SelectContent>
               {accounts.map((a) => (
@@ -182,8 +185,8 @@ export default function FinanceImportPage() {
               <p className="text-sm font-medium">{selectedFile.name}</p>
             ) : (
               <div className="text-center">
-                <p className="text-sm font-medium">Přetáhněte soubor sem</p>
-                <p className="text-xs text-muted-foreground mt-1">nebo klikněte pro výběr</p>
+                <p className="text-sm font-medium">{t("finance.importPage.dragHere")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("finance.importPage.clickToSelect")}</p>
               </div>
             )}
           </div>
@@ -210,7 +213,7 @@ export default function FinanceImportPage() {
               Importuji…
             </>
           ) : (
-            "Importovat"
+            t("finance.transactionImport.importButton")
           )}
         </Button>
       </div>
@@ -231,19 +234,19 @@ export default function FinanceImportPage() {
           <CardContent className="pt-4 space-y-3">
             <div className="flex items-center gap-2 font-medium text-green-700 dark:text-green-400">
               <CheckCircle2 className="h-4 w-4" />
-              Import dokončen
+              {t("finance.transactionImport.importResult")}
             </div>
             <p className="text-sm">
-              Importováno <strong>{result.imported}</strong> transakcí,
-              přeskočeno <strong>{result.skipped}</strong> duplicit
+              {t("finance.transactionImport.resultImported")} <strong>{result.imported}</strong>,{" "}
+              {t("finance.transactionImport.resultSkipped")} <strong>{result.skipped}</strong>
             </p>
             {result.errors.length > 0 && (
               <div className="space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">
-                  {result.errors.length} řádků přeskočeno (chybějící kategorie):
+                  {result.errors.length} {t("finance.transactionImport.resultErrors")}:
                 </p>
-                {result.errors.slice(0, 5).map((e, i) => (
-                  <p key={i} className="text-xs text-muted-foreground">{e}</p>
+                {result.errors.slice(0, 5).map((e, idx) => (
+                  <p key={idx} className="text-xs text-muted-foreground">{e}</p>
                 ))}
               </div>
             )}

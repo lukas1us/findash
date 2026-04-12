@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +12,7 @@ import Link from "next/link";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { formatCurrency, formatNumber } from "@/lib/formatters";
 import { useToast } from "@/components/ui/use-toast";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface Asset {
   id: string;
@@ -24,20 +25,21 @@ interface Asset {
   cryptoTransactions: { quantity: number }[];
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  CRYPTO: "Krypto",
-  REAL_ESTATE: "Nemovitosti",
-  GOLD_SILVER: "Zlato & Stříbro",
-  OTHER: "Ostatní",
-};
-
 export default function AssetsPage() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editAsset, setEditAsset] = useState<Asset | null>(null);
   const [form, setForm] = useState({ name: "", ticker: "", type: "CRYPTO" as Asset["type"], currency: "CZK" });
   const [saving, setSaving] = useState(false);
+
+  const TYPE_LABELS = useMemo(() => ({
+    CRYPTO: t("investments.assets.types.CRYPTO"),
+    REAL_ESTATE: t("investments.assets.types.REAL_ESTATE"),
+    GOLD_SILVER: t("investments.assets.types.GOLD_SILVER"),
+    OTHER: t("investments.assets.types.OTHER"),
+  }), [t]);
 
   const load = useCallback(() => {
     fetch("/api/investments/assets").then((r) => (r.ok ? r.json() : [])).then(setAssets).catch(() => {});
@@ -74,20 +76,20 @@ export default function AssetsPage() {
           body: JSON.stringify(form),
         });
       }
-      toast({ title: "Aktivum uloženo" });
+      toast({ title: t("investments.assets.saved") });
       setFormOpen(false);
       load();
     } catch {
-      toast({ title: "Chyba", variant: "destructive" });
+      toast({ title: t("common.error"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Smazat aktivum a všechny nákupy?")) return;
+    if (!confirm(t("investments.assets.deleteConfirm"))) return;
     await fetch(`/api/investments/assets/${id}`, { method: "DELETE" });
-    toast({ title: "Aktivum smazáno" });
+    toast({ title: t("investments.assets.deleted") });
     load();
   }
 
@@ -95,11 +97,11 @@ export default function AssetsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Aktiva</h1>
-          <p className="text-muted-foreground">Správa investičních aktiv</p>
+          <h1 className="text-3xl font-bold">{t("investments.assets.title")}</h1>
+          <p className="text-muted-foreground">{t("investments.assets.subtitle")}</p>
         </div>
         <Button onClick={openNew}>
-          <Plus className="mr-2 h-4 w-4" /> Nové aktivum
+          <Plus className="mr-2 h-4 w-4" /> {t("investments.assets.addAsset")}
         </Button>
       </div>
 
@@ -108,13 +110,13 @@ export default function AssetsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Název</TableHead>
-                <TableHead>Ticker</TableHead>
-                <TableHead>Typ</TableHead>
-                <TableHead>Měna</TableHead>
-                <TableHead className="text-right">Celk. množství</TableHead>
-                <TableHead className="text-right">Aktuální cena</TableHead>
-                <TableHead className="text-right">Hodnota</TableHead>
+                <TableHead>{t("investments.assets.name")}</TableHead>
+                <TableHead>{t("investments.assets.ticker")}</TableHead>
+                <TableHead>{t("investments.assets.type")}</TableHead>
+                <TableHead>{t("investments.assets.currency")}</TableHead>
+                <TableHead className="text-right">{t("investments.assets.quantity")}</TableHead>
+                <TableHead className="text-right">{t("investments.assets.currentPrice")}</TableHead>
+                <TableHead className="text-right">{t("investments.assets.value")}</TableHead>
                 <TableHead className="w-20"></TableHead>
               </TableRow>
             </TableHeader>
@@ -158,7 +160,7 @@ export default function AssetsPage() {
               {assets.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                    Žádná aktiva
+                    {t("investments.assets.noAssets")}
                   </TableCell>
                 </TableRow>
               )}
@@ -170,11 +172,11 @@ export default function AssetsPage() {
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editAsset ? "Upravit aktivum" : "Nové aktivum"}</DialogTitle>
+            <DialogTitle>{editAsset ? t("investments.assets.editAsset") : t("investments.assets.addAsset")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
             <div className="space-y-2">
-              <Label>Název</Label>
+              <Label>{t("investments.assets.name")}</Label>
               <Input
                 placeholder="Bitcoin"
                 value={form.name}
@@ -184,7 +186,7 @@ export default function AssetsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Ticker</Label>
+                <Label>{t("investments.assets.ticker")}</Label>
                 <Input
                   placeholder="BTC"
                   value={form.ticker}
@@ -193,7 +195,7 @@ export default function AssetsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Měna</Label>
+                <Label>{t("investments.assets.currency")}</Label>
                 <Input
                   placeholder="CZK"
                   value={form.currency}
@@ -202,21 +204,21 @@ export default function AssetsPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Typ</Label>
+              <Label>{t("investments.assets.type")}</Label>
               <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v as Asset["type"] }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="CRYPTO">Krypto</SelectItem>
-                  <SelectItem value="REAL_ESTATE">Nemovitosti</SelectItem>
-                  <SelectItem value="GOLD_SILVER">Zlato & Stříbro</SelectItem>
-                  <SelectItem value="OTHER">Ostatní</SelectItem>
+                  <SelectItem value="CRYPTO">{TYPE_LABELS.CRYPTO}</SelectItem>
+                  <SelectItem value="REAL_ESTATE">{TYPE_LABELS.REAL_ESTATE}</SelectItem>
+                  <SelectItem value="GOLD_SILVER">{TYPE_LABELS.GOLD_SILVER}</SelectItem>
+                  <SelectItem value="OTHER">{TYPE_LABELS.OTHER}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Zrušit</Button>
+              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>{t("common.cancel")}</Button>
               <Button type="submit" disabled={saving}>
-                {saving ? "Ukládám…" : "Uložit"}
+                {saving ? t("common.saving") : t("common.save")}
               </Button>
             </DialogFooter>
           </form>

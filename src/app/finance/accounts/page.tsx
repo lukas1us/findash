@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Wallet, PiggyBank, Banknote } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { useToast } from "@/components/ui/use-toast";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface Account {
   id: string;
@@ -20,12 +21,6 @@ interface Account {
   balance: number;
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  CHECKING: "Běžný účet",
-  SAVINGS: "Spořicí účet",
-  CASH: "Hotovost",
-};
-
 const TYPE_ICONS: Record<string, React.ReactNode> = {
   CHECKING: <Wallet className="h-6 w-6" />,
   SAVINGS: <PiggyBank className="h-6 w-6" />,
@@ -34,11 +29,18 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
 
 export default function AccountsPage() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editAccount, setEditAccount] = useState<Account | null>(null);
   const [form, setForm] = useState({ name: "", type: "CHECKING" as Account["type"], currency: "CZK", balance: "" });
   const [saving, setSaving] = useState(false);
+
+  const TYPE_LABELS = useMemo(() => ({
+    CHECKING: t("finance.accounts.types.CHECKING"),
+    SAVINGS: t("finance.accounts.types.SAVINGS"),
+    CASH: t("finance.accounts.types.CASH"),
+  }), [t]);
 
   const load = useCallback(() => {
     fetch("/api/finance/accounts").then((r) => (r.ok ? r.json() : [])).then(setAccounts).catch(() => {});
@@ -75,20 +77,20 @@ export default function AccountsPage() {
           body: JSON.stringify({ ...form, balance: Number(form.balance) }),
         });
       }
-      toast({ title: "Účet uložen" });
+      toast({ title: t("finance.accounts.saved") });
       setFormOpen(false);
       load();
     } catch {
-      toast({ title: "Chyba", variant: "destructive" });
+      toast({ title: t("common.error"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Smazat účet a všechny jeho transakce?")) return;
+    if (!confirm(t("finance.accounts.deleteConfirm"))) return;
     await fetch(`/api/finance/accounts/${id}`, { method: "DELETE" });
-    toast({ title: "Účet smazán" });
+    toast({ title: t("finance.accounts.deleted") });
     load();
   }
 
@@ -98,17 +100,17 @@ export default function AccountsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Účty</h1>
-          <p className="text-muted-foreground">Správa bankovních účtů a hotovosti</p>
+          <h1 className="text-3xl font-bold">{t("finance.accounts.title")}</h1>
+          <p className="text-muted-foreground">{t("finance.accounts.subtitle")}</p>
         </div>
         <Button onClick={openNew}>
-          <Plus className="mr-2 h-4 w-4" /> Nový účet
+          <Plus className="mr-2 h-4 w-4" /> {t("finance.accounts.newAccount")}
         </Button>
       </div>
 
       <Card className="bg-primary/5 border-primary/20">
         <CardContent className="pt-4">
-          <p className="text-sm text-muted-foreground">Celkový zůstatek</p>
+          <p className="text-sm text-muted-foreground">{t("finance.accounts.totalAssets")}</p>
           <p className="text-3xl font-bold">{formatCurrency(totalBalance)}</p>
         </CardContent>
       </Card>
@@ -149,7 +151,7 @@ export default function AccountsPage() {
 
         {accounts.length === 0 && (
           <div className="col-span-full text-center text-muted-foreground py-12">
-            Žádné účty
+            {t("finance.accounts.noAccounts")}
           </div>
         )}
       </div>
@@ -157,32 +159,32 @@ export default function AccountsPage() {
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editAccount ? "Upravit účet" : "Nový účet"}</DialogTitle>
+            <DialogTitle>{editAccount ? t("finance.accounts.editAccount") : t("finance.accounts.newAccount")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
             <div className="space-y-2">
-              <Label>Název</Label>
+              <Label>{t("finance.accounts.name")}</Label>
               <Input
-                placeholder="Název účtu"
+                placeholder={t("finance.accounts.namePlaceholder")}
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label>Typ</Label>
+              <Label>{t("finance.accounts.type")}</Label>
               <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v as Account["type"] }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="CHECKING">Běžný účet</SelectItem>
-                  <SelectItem value="SAVINGS">Spořicí účet</SelectItem>
-                  <SelectItem value="CASH">Hotovost</SelectItem>
+                  <SelectItem value="CHECKING">{TYPE_LABELS.CHECKING}</SelectItem>
+                  <SelectItem value="SAVINGS">{TYPE_LABELS.SAVINGS}</SelectItem>
+                  <SelectItem value="CASH">{TYPE_LABELS.CASH}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Měna</Label>
+                <Label>{t("finance.accounts.currency")}</Label>
                 <Input
                   value={form.currency}
                   onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value }))}
@@ -190,7 +192,7 @@ export default function AccountsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Zůstatek</Label>
+                <Label>{t("finance.accounts.initialBalance")}</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -202,9 +204,9 @@ export default function AccountsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Zrušit</Button>
+              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>{t("common.cancel")}</Button>
               <Button type="submit" disabled={saving}>
-                {saving ? "Ukládám…" : "Uložit"}
+                {saving ? t("common.saving") : t("common.save")}
               </Button>
             </DialogFooter>
           </form>

@@ -12,15 +12,15 @@ import {
 import Link from "next/link";
 import { formatCurrency } from "@/lib/formatters";
 import type { CryptoFilePreview, CryptoPreviewRow } from "@/lib/crypto-parsers/types";
+import { useTranslation, i } from "@/lib/i18n/context";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const FORMAT_LABELS: Record<string, string> = {
+const FORMAT_LABELS_FIXED: Record<string, string> = {
   binance:          "Binance",
   coinmate_orders:  "Coinmate Orders",
   coinmate_history: "Coinmate History",
   cryptocom:        "Crypto.com",
-  unknown:          "Neznámý formát",
 };
 
 const TX_BADGE: Record<string, string> = {
@@ -38,6 +38,8 @@ type Step = 1 | 2 | 3;
 
 export default function CryptoImportPage() {
   const { toast } = useToast();
+  const { t } = useTranslation();
+  const FORMAT_LABELS = { ...FORMAT_LABELS_FIXED, unknown: t("investments.import.unknownFormat") };
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step,       setStep]       = useState<Step>(1);
@@ -46,7 +48,7 @@ export default function CryptoImportPage() {
   const [importing,  setImporting]  = useState(false);
   const [files,      setFiles]      = useState<File[]>([]);
   const [previews,   setPreviews]   = useState<CryptoFilePreview[]>([]);
-  const [skipped,    setSkipped]    = useState<Record<string, boolean>>({}); // "fileIdx:rowIdx" → skip
+  const [skipped,    setSkipped]    = useState<Record<string, boolean>>({});
   const [importResult, setImportResult] = useState<Record<string, { imported: number; skipped: number; errors: string[] }> | null>(null);
 
 
@@ -55,7 +57,7 @@ export default function CryptoImportPage() {
   function addFiles(incoming: FileList | File[]) {
     const csvs = Array.from(incoming).filter((f) => f.name.endsWith(".csv"));
     if (!csvs.length) {
-      toast({ title: "Pouze .csv soubory", variant: "destructive" });
+      toast({ title: t("investments.import.csvOnly"), variant: "destructive" });
       return;
     }
     setFiles((prev) => {
@@ -89,7 +91,7 @@ export default function CryptoImportPage() {
       setSkipped(autoSkip);
       setStep(2);
     } catch (err) {
-      toast({ title: "Chyba při analýze", description: String(err), variant: "destructive" });
+      toast({ title: t("investments.import.analyzeError"), description: String(err), variant: "destructive" });
     } finally {
       setAnalyzing(false);
     }
@@ -115,7 +117,7 @@ export default function CryptoImportPage() {
       setImportResult(summary);
       setStep(3);
     } catch (err) {
-      toast({ title: "Chyba při importu", description: String(err), variant: "destructive" });
+      toast({ title: t("investments.import.importError"), description: String(err), variant: "destructive" });
     } finally {
       setImporting(false);
     }
@@ -132,8 +134,8 @@ export default function CryptoImportPage() {
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
-        <h1 className="text-3xl font-bold">Import krypto transakcí</h1>
-        <p className="text-muted-foreground">Nahrát výpisy z Binance, Coinmate nebo Crypto.com</p>
+        <h1 className="text-3xl font-bold">{t("investments.import.title")}</h1>
+        <p className="text-muted-foreground">{t("investments.import.subtitle")}</p>
       </div>
 
       {/* ── Step 1: Upload ───────────────────────────────────────────────── */}
@@ -150,7 +152,7 @@ export default function CryptoImportPage() {
           >
             <Upload className="h-10 w-10 text-muted-foreground" />
             <div className="text-center">
-              <p className="font-medium">Přetáhněte CSV soubory sem (více najednou)</p>
+              <p className="font-medium">{t("investments.import.dragCsvHere")}</p>
               <p className="text-sm text-muted-foreground mt-1">Binance, Coinmate Orders, Coinmate History, Crypto.com</p>
             </div>
           </div>
@@ -178,8 +180,8 @@ export default function CryptoImportPage() {
 
           <Button onClick={handleAnalyze} disabled={!files.length || analyzing}>
             {analyzing
-              ? <><span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent inline-block" />Analyzuji…</>
-              : <>Analyzovat {files.length > 0 ? `(${files.length} souborů)` : ""}</>}
+              ? <><span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent inline-block" />{t("investments.import.analyzing")}</>
+              : <>{t("investments.import.analyzeButton")} {files.length > 0 ? `(${files.length})` : ""}</>}
           </Button>
         </div>
       )}
@@ -190,16 +192,16 @@ export default function CryptoImportPage() {
           {/* Summary bar */}
           <div className="flex flex-wrap gap-3 text-sm">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-950/30 text-green-700">
-              <CheckCircle2 className="h-3.5 w-3.5" />K importu: <strong>{totalToImport}</strong>
+              <CheckCircle2 className="h-3.5 w-3.5" />{t("investments.import.toImport")} <strong>{totalToImport}</strong>
             </div>
             {totalDups > 0 && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-100 dark:bg-yellow-950/30 text-yellow-700">
-                <AlertTriangle className="h-3.5 w-3.5" />Duplikáty: <strong>{totalDups}</strong>
+                <AlertTriangle className="h-3.5 w-3.5" />{t("investments.import.skipped")} <strong>{totalDups}</strong>
               </div>
             )}
             {totalErrs > 0 && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-100 dark:bg-red-950/30 text-red-700">
-                <AlertTriangle className="h-3.5 w-3.5" />Chyby: <strong>{totalErrs}</strong>
+                <AlertTriangle className="h-3.5 w-3.5" />{t("investments.import.errors")} <strong>{totalErrs}</strong>
               </div>
             )}
           </div>
@@ -213,7 +215,7 @@ export default function CryptoImportPage() {
                   <CardTitle className="text-sm font-medium">{fp.filename}</CardTitle>
                   <Badge variant="secondary">{FORMAT_LABELS[fp.format] ?? fp.format}</Badge>
                   <span className="text-xs text-muted-foreground ml-auto">
-                    {fp.toImportCount} k importu · {fp.duplicateCount} duplikátů · {fp.errorCount} chyb
+                    {fp.toImportCount} {t("investments.import.toImport").replace(":", "")} · {fp.duplicateCount} {t("investments.import.skipped").replace(":", "")} · {fp.errorCount} {t("investments.import.errors").replace(":", "")}
                   </span>
                 </div>
                 {fp.warnings.map((w, wi) => (
@@ -242,13 +244,13 @@ export default function CryptoImportPage() {
                             }}
                           />
                         </TableHead>
-                        <TableHead>Datum</TableHead>
-                        <TableHead>Typ</TableHead>
-                        <TableHead>Aktivum</TableHead>
-                        <TableHead className="text-right">Množství</TableHead>
-                        <TableHead className="text-right">Cena/ks</TableHead>
-                        <TableHead className="text-right">Celkem CZK</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>{t("investments.assetDetail.date")}</TableHead>
+                        <TableHead>{t("investments.assetDetail.type")}</TableHead>
+                        <TableHead>{t("investments.assets.name")}</TableHead>
+                        <TableHead className="text-right">{t("investments.assetDetail.quantity")}</TableHead>
+                        <TableHead className="text-right">{t("investments.assetDetail.pricePerUnit")}</TableHead>
+                        <TableHead className="text-right">{t("investments.assetDetail.totalCzk")}</TableHead>
+                        <TableHead>{t("finance.transactionImport.status")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -289,8 +291,8 @@ export default function CryptoImportPage() {
                             <TableCell className="text-right text-xs">{r.totalCZK ? formatCurrency(r.totalCZK) : "—"}</TableCell>
                             <TableCell>
                               {isDup
-                                ? <span className="text-xs text-yellow-600 font-medium">Duplikát</span>
-                                : <span className="text-xs text-muted-foreground">OK</span>}
+                                ? <span className="text-xs text-yellow-600 font-medium">{t("finance.transactionImport.duplicate")}</span>
+                                : <span className="text-xs text-muted-foreground">{t("finance.transactionImport.ok")}</span>}
                             </TableCell>
                           </TableRow>
                         );
@@ -298,7 +300,7 @@ export default function CryptoImportPage() {
                       {fp.rows.length > 50 && (
                         <TableRow>
                           <TableCell colSpan={8} className="text-center text-xs text-muted-foreground py-2">
-                            … a dalších {fp.rows.length - 50} řádků
+                            {i(t("investments.import.andMore"), { n: fp.rows.length - 50 })}
                           </TableCell>
                         </TableRow>
                       )}
@@ -311,12 +313,12 @@ export default function CryptoImportPage() {
 
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => { setStep(1); setPreviews([]); }}>
-              Zpět
+              {t("common.back")}
             </Button>
             <Button onClick={handleImport} disabled={importing || totalToImport === 0}>
               {importing
-                ? <><span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent inline-block" />Importuji…</>
-                : <>Importovat vše ({totalToImport}) <ArrowRight className="ml-2 h-4 w-4" /></>}
+                ? <><span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent inline-block" />{t("investments.import.importing")}</>
+                : <>{t("finance.transactionImport.importButton")} ({totalToImport}) <ArrowRight className="ml-2 h-4 w-4" /></>}
             </Button>
           </div>
         </div>
@@ -329,7 +331,7 @@ export default function CryptoImportPage() {
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
               <CheckCircle2 className="h-8 w-8 text-green-600" />
             </div>
-            <h2 className="text-2xl font-bold">Import dokončen</h2>
+            <h2 className="text-2xl font-bold">{t("finance.transactionImport.importResult")}</h2>
           </div>
 
           <div className="space-y-3">
@@ -339,15 +341,15 @@ export default function CryptoImportPage() {
                   <div className="flex items-center justify-between">
                     <p className="font-medium">{source.replace(/_/g, " ")}</p>
                     <div className="flex gap-4 text-sm">
-                      <span className="text-green-600 font-medium">importováno: {s.imported}</span>
-                      {s.skipped > 0 && <span className="text-muted-foreground">přeskočeno: {s.skipped}</span>}
-                      {s.errors.length > 0 && <span className="text-destructive">chyby: {s.errors.length}</span>}
+                      <span className="text-green-600 font-medium">{t("finance.transactionImport.resultImported")}: {s.imported}</span>
+                      {s.skipped > 0 && <span className="text-muted-foreground">{t("finance.transactionImport.resultSkipped")}: {s.skipped}</span>}
+                      {s.errors.length > 0 && <span className="text-destructive">{t("finance.transactionImport.resultErrors")}: {s.errors.length}</span>}
                     </div>
                   </div>
                   {s.errors.length > 0 && (
                     <div className="mt-2 space-y-1">
-                      {s.errors.slice(0, 5).map((e, i) => (
-                        <p key={i} className="text-xs text-muted-foreground">{e}</p>
+                      {s.errors.slice(0, 5).map((e, idx) => (
+                        <p key={idx} className="text-xs text-muted-foreground">{e}</p>
                       ))}
                     </div>
                   )}
@@ -357,10 +359,10 @@ export default function CryptoImportPage() {
           </div>
 
           <div className="flex gap-3">
-            <Button asChild><Link href="/investments/assets">Přejít na aktiva</Link></Button>
+            <Button asChild><Link href="/investments/assets">{t("investments.import.goToAssets")}</Link></Button>
             <Button variant="outline" onClick={() => {
               setStep(1); setFiles([]); setPreviews([]); setSkipped({}); setImportResult(null);
-            }}>Nový import</Button>
+            }}>{t("investments.import.newImport")}</Button>
           </div>
         </div>
       )}

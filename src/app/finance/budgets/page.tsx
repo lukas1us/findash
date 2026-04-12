@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Plus, Pencil, Trash2, Copy } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { useToast } from "@/components/ui/use-toast";
-import { format, startOfMonth, endOfMonth, parseISO, subMonths } from "date-fns";
+import { format, parseISO, subMonths } from "date-fns";
+import { useTranslation, i } from "@/lib/i18n/context";
 
 interface Budget {
   id: string;
@@ -31,6 +32,7 @@ function getMonthOptions() {
 
 export default function BudgetsPage() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [spends, setSpends] = useState<Record<string, number>>({});
@@ -52,14 +54,12 @@ export default function BudgetsPage() {
     ]);
     setBudgets(budgetsData);
 
-    // Sum spend per category
     const s: Record<string, number> = {};
     for (const tx of txData) {
       s[tx.categoryId] = (s[tx.categoryId] ?? 0) + tx.amount;
     }
     setSpends(s);
 
-    // Check if previous month has budgets (for copy button)
     if (budgetsData.length === 0) {
       fetch(`/api/finance/budgets?month=${prevMonth}`)
         .then((r) => (r.ok ? r.json() : []))
@@ -106,11 +106,11 @@ export default function BudgetsPage() {
           body: JSON.stringify({ categoryId: form.categoryId, amount: Number(form.amount), month }),
         });
       }
-      toast({ title: "Rozpočet uložen" });
+      toast({ title: t("finance.budgets.saved") });
       setFormOpen(false);
       load();
     } catch {
-      toast({ title: "Chyba", variant: "destructive" });
+      toast({ title: t("common.error"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -126,16 +126,16 @@ export default function BudgetsPage() {
       });
       load();
     } catch {
-      toast({ title: "Chyba při kopírování", variant: "destructive" });
+      toast({ title: t("finance.budgets.copyError"), variant: "destructive" });
     } finally {
       setCopying(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Smazat rozpočet?")) return;
+    if (!confirm(t("finance.budgets.deleteConfirm"))) return;
     await fetch(`/api/finance/budgets/${id}`, { method: "DELETE" });
-    toast({ title: "Rozpočet smazán" });
+    toast({ title: t("finance.budgets.deleted") });
     load();
   }
 
@@ -148,11 +148,11 @@ export default function BudgetsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Rozpočty</h1>
-          <p className="text-muted-foreground">Limity výdajů dle kategorií</p>
+          <h1 className="text-3xl font-bold">{t("finance.budgets.title")}</h1>
+          <p className="text-muted-foreground">{t("finance.budgets.subtitle")}</p>
         </div>
         <Button onClick={openNew}>
-          <Plus className="mr-2 h-4 w-4" /> Nový rozpočet
+          <Plus className="mr-2 h-4 w-4" /> {t("finance.budgets.addBudget")}
         </Button>
       </div>
 
@@ -199,9 +199,9 @@ export default function BudgetsPage() {
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className={over ? "text-destructive font-medium" : "text-muted-foreground"}>
-                    Utraceno: {formatCurrency(spent)}
+                    {t("finance.budgets.spent")}: {formatCurrency(spent)}
                   </span>
-                  <span className="text-muted-foreground">Limit: {formatCurrency(b.amount)}</span>
+                  <span className="text-muted-foreground">{t("finance.budgets.limitLabel")}: {formatCurrency(b.amount)}</span>
                 </div>
                 <Progress
                   value={pct}
@@ -209,9 +209,9 @@ export default function BudgetsPage() {
                 />
                 <p className="text-xs text-muted-foreground text-right">
                   {over ? (
-                    <span className="text-destructive">Překročeno o {formatCurrency(spent - b.amount)}</span>
+                    <span className="text-destructive">{i(t("finance.budgets.overBy"), { amount: formatCurrency(spent - b.amount) })}</span>
                   ) : (
-                    <span>Zbývá {formatCurrency(b.amount - spent)}</span>
+                    <span>{i(t("finance.budgets.remaining"), { amount: formatCurrency(b.amount - spent) })}</span>
                   )}
                 </p>
               </CardContent>
@@ -221,11 +221,11 @@ export default function BudgetsPage() {
 
         {budgets.length === 0 && (
           <div className="col-span-full flex flex-col items-center gap-4 py-12 text-muted-foreground">
-            <p>Žádné rozpočty pro tento měsíc</p>
+            <p>{t("finance.budgets.noBudgets")}</p>
             {prevMonthHasBudgets && (
               <Button variant="outline" onClick={handleCopy} disabled={copying}>
                 <Copy className="mr-2 h-4 w-4" />
-                {copying ? "Kopíruji…" : `Zkopírovat z ${monthOptions.find((o) => o.value === prevMonth)?.label ?? prevMonth}`}
+                {copying ? t("common.saving") : `${t("finance.budgets.copyFrom")} ${monthOptions.find((o) => o.value === prevMonth)?.label ?? prevMonth}`}
               </Button>
             )}
           </div>
@@ -235,14 +235,14 @@ export default function BudgetsPage() {
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editBudget ? "Upravit rozpočet" : "Nový rozpočet"}</DialogTitle>
+            <DialogTitle>{editBudget ? t("finance.budgets.editBudget") : t("finance.budgets.addBudget")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
             {!editBudget && (
               <div className="space-y-2">
-                <Label>Kategorie</Label>
+                <Label>{t("finance.budgets.category")}</Label>
                 <Select value={form.categoryId} onValueChange={(v) => setForm((f) => ({ ...f, categoryId: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Vyberte kategorii" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("finance.transactionImport.selectCategory")} /></SelectTrigger>
                   <SelectContent>
                     {availableCategories.map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -252,7 +252,7 @@ export default function BudgetsPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label>Limit (CZK)</Label>
+              <Label>{t("finance.budgets.limit")}</Label>
               <Input
                 type="number"
                 min="0"
@@ -264,9 +264,9 @@ export default function BudgetsPage() {
               />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Zrušit</Button>
+              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>{t("common.cancel")}</Button>
               <Button type="submit" disabled={saving || (!editBudget && !form.categoryId)}>
-                {saving ? "Ukládám…" : "Uložit"}
+                {saving ? t("common.saving") : t("common.save")}
               </Button>
             </DialogFooter>
           </form>

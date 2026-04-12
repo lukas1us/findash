@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,6 +29,7 @@ import type {
   ConfirmFinanceRow,
   ConfirmInvestmentRow,
 } from "@/lib/csv-parsers/types";
+import { useTranslation } from "@/lib/i18n/context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,19 +38,6 @@ interface Category { id: string; name: string; type: string; color: string }
 interface Asset    { id: string; name: string; ticker: string }
 
 type Step = 1 | 2 | 3 | 4;
-
-const FORMAT_LABELS: Record<string, string> = {
-  airbank:   "Air Bank",
-  revolut:   "Revolut",
-  coinmate:  "Coinmate",
-  cryptocom: "Crypto.com",
-  unknown:   "Neznámý",
-};
-
-const MODULE_LABELS: Record<string, string> = {
-  finance:     "Finance (transakce)",
-  investments: "Investice (nákupy)",
-};
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
@@ -66,8 +54,7 @@ function StepDot({ n, current }: { n: number; current: number }) {
   );
 }
 
-function StepBar({ current }: { current: Step }) {
-  const labels = ["Nahrát soubor", "Mapování", "Přehled a import", "Výsledek"];
+function StepBar({ current, labels }: { current: Step; labels: string[] }) {
   return (
     <div className="flex items-center gap-2 mb-8">
       {labels.map((label, i) => (
@@ -91,6 +78,7 @@ function StepBar({ current }: { current: Step }) {
 
 export default function ImportPage() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const fileInputRef  = useRef<HTMLInputElement>(null);
   const dropRef       = useRef<HTMLDivElement>(null);
 
@@ -108,7 +96,7 @@ export default function ImportPage() {
 
   // Mappings
   const [accountId,    setAccountId]   = useState<string>("");
-  const [assetMapping, setAssetMapping] = useState<Record<string, string>>({}); // ticker → assetId
+  const [assetMapping, setAssetMapping] = useState<Record<string, string>>({});
   const [feeCategory,  setFeeCategory] = useState<string>("");
 
   // Per-row overrides (step 3)
@@ -118,6 +106,26 @@ export default function ImportPage() {
 
   // Step 4
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number; errors: string[] } | null>(null);
+
+  const FORMAT_LABELS = useMemo((): Record<string, string> => ({
+    airbank:   "Air Bank",
+    revolut:   "Revolut",
+    coinmate:  "Coinmate",
+    cryptocom: "Crypto.com",
+    unknown:   t("finance.transactionImport.formatLabels.unknown"),
+  }), [t]);
+
+  const MODULE_LABELS = useMemo((): Record<string, string> => ({
+    finance:     t("finance.transactionImport.formatLabels.financeModule"),
+    investments: t("finance.transactionImport.formatLabels.investmentsModule"),
+  }), [t]);
+
+  const stepLabels = useMemo(() => [
+    t("finance.transactionImport.steps.upload"),
+    t("finance.transactionImport.steps.map"),
+    t("finance.transactionImport.steps.review"),
+    t("finance.transactionImport.steps.done"),
+  ], [t]);
 
   // Load reference data
   useEffect(() => {
@@ -136,7 +144,7 @@ export default function ImportPage() {
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.name.endsWith(".csv")) {
-      toast({ title: "Neplatný soubor", description: "Povoleny jsou pouze soubory .csv", variant: "destructive" });
+      toast({ title: t("finance.transactionImport.invalidFile"), description: t("finance.transactionImport.csvOnly"), variant: "destructive" });
       return;
     }
     setSelectedFile(file);
@@ -162,7 +170,7 @@ export default function ImportPage() {
       });
       setRowSkipped(autoSkip);
 
-      // Pre-fill asset mapping from DB: if ticker matches an existing asset
+      // Pre-fill asset mapping from DB
       const mapping: Record<string, string> = {};
       for (const ticker of data.tickers) {
         const asset = assets.find((a) => a.ticker.toUpperCase() === ticker.toUpperCase());
@@ -172,7 +180,7 @@ export default function ImportPage() {
 
       setStep(2);
     } catch (err) {
-      toast({ title: "Chyba při parsování", description: String(err), variant: "destructive" });
+      toast({ title: t("finance.transactionImport.parseError"), description: String(err), variant: "destructive" });
     } finally {
       setUploading(false);
     }
@@ -212,7 +220,7 @@ export default function ImportPage() {
 
   const step2Valid = isFinance
     ? !!accountId
-    : preview?.tickers.every((t) => !!assetMapping[t]) ?? false;
+    : preview?.tickers.every((tk) => !!assetMapping[tk]) ?? false;
 
   // ── Import ────────────────────────────────────────────────────────────────
 
@@ -266,7 +274,7 @@ export default function ImportPage() {
       setImportResult(result);
       setStep(4);
     } catch (err) {
-      toast({ title: "Chyba při importu", description: String(err), variant: "destructive" });
+      toast({ title: t("finance.transactionImport.importError"), description: String(err), variant: "destructive" });
     } finally {
       setImporting(false);
     }
@@ -279,11 +287,11 @@ export default function ImportPage() {
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
-        <h1 className="text-3xl font-bold">Import</h1>
-        <p className="text-muted-foreground">Nahrát výpis z banky nebo kryptoměnové burzy</p>
+        <h1 className="text-3xl font-bold">{t("finance.transactionImport.title")}</h1>
+        <p className="text-muted-foreground">{t("finance.transactionImport.subtitle")}</p>
       </div>
 
-      <StepBar current={step} />
+      <StepBar current={step} labels={stepLabels} />
 
       {/* ── Step 1: Upload ────────────────────────────────────────────────── */}
       {step === 1 && (
@@ -300,14 +308,14 @@ export default function ImportPage() {
             {uploading ? (
               <>
                 <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                <p className="text-muted-foreground">Parsování…</p>
+                <p className="text-muted-foreground">{t("finance.transactionImport.parsing")}</p>
               </>
             ) : (
               <>
                 <Upload className="h-10 w-10 text-muted-foreground" />
                 <div className="text-center">
-                  <p className="font-medium">Přetáhněte CSV soubor sem</p>
-                  <p className="text-sm text-muted-foreground mt-1">nebo klikněte pro výběr souboru</p>
+                  <p className="font-medium">{t("finance.transactionImport.dragCsvHere")}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{t("finance.transactionImport.clickToSelectFile")}</p>
                 </div>
               </>
             )}
@@ -322,21 +330,20 @@ export default function ImportPage() {
 
           <Card className="bg-muted/30">
             <CardContent className="pt-4 space-y-3">
-              <p className="text-sm font-medium flex items-center gap-2"><Info className="h-4 w-4" /> Podporované formáty</p>
+              <p className="text-sm font-medium flex items-center gap-2"><Info className="h-4 w-4" /> {t("finance.transactionImport.supportedFormatsTitle")}</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                {[
-                  { name: "Air Bank", module: "Finance", note: "výpis účtu (;)" },
-                  { name: "Revolut",  module: "Finance", note: "všechny měny (,)" },
-                  { name: "Coinmate", module: "Investice", note: "BUY/DEPOSIT (;)" },
-                  { name: "Crypto.com", module: "Investice", note: "nákupy (,)" },
-                ].map((f) => (
-                  <div key={f.name} className="rounded-md border p-3 space-y-1">
-                    <p className="font-medium">{f.name}</p>
-                    <Badge variant={f.module === "Finance" ? "default" : "secondary"} className="text-xs">
-                      {f.module === "Finance" ? <Wallet className="h-3 w-3 mr-1 inline" /> : <TrendingUp className="h-3 w-3 mr-1 inline" />}
-                      {f.module}
+                {([
+                  { name: "Air Bank",    type: "finance" as const },
+                  { name: "Revolut",     type: "finance" as const },
+                  { name: "Coinmate",    type: "investments" as const },
+                  { name: "Crypto.com",  type: "investments" as const },
+                ] as { name: string; type: "finance" | "investments" }[]).map((fmt) => (
+                  <div key={fmt.name} className="rounded-md border p-3 space-y-1">
+                    <p className="font-medium">{fmt.name}</p>
+                    <Badge variant={fmt.type === "finance" ? "default" : "secondary"} className="text-xs">
+                      {fmt.type === "finance" ? <Wallet className="h-3 w-3 mr-1 inline" /> : <TrendingUp className="h-3 w-3 mr-1 inline" />}
+                      {fmt.type === "finance" ? t("sidebar.financeSection") : t("sidebar.investmentsSection")}
                     </Badge>
-                    <p className="text-xs text-muted-foreground">{f.note}</p>
                   </div>
                 ))}
               </div>
@@ -354,12 +361,12 @@ export default function ImportPage() {
               <FileText className="h-5 w-5 text-primary shrink-0" />
               <div>
                 <p className="font-medium">
-                  Detekován formát: <span className="text-primary">{FORMAT_LABELS[preview.format]}</span>
+                  {t("finance.transactionImport.detectedFormat")} <span className="text-primary">{FORMAT_LABELS[preview.format]}</span>
                   {" · "}
-                  Data budou importována do: <span className="text-primary">{MODULE_LABELS[preview.module]}</span>
+                  {t("finance.transactionImport.importedTo")} <span className="text-primary">{MODULE_LABELS[preview.module]}</span>
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {validRows.length} platných řádků · {errorCount} chyb · {dupCount} duplikátů
+                  {validRows.length} {t("finance.transactionImport.validRows")} · {errorCount} {t("finance.transactionImport.errors")} · {dupCount} {t("finance.transactionImport.duplicates")}
                 </p>
               </div>
             </CardContent>
@@ -381,18 +388,18 @@ export default function ImportPage() {
           {isFinance && (
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Cílový účet *</label>
+                <label className="text-sm font-medium">{t("finance.transactionImport.targetAccount")}</label>
                 <Select value={accountId} onValueChange={setAccountId}>
-                  <SelectTrigger><SelectValue placeholder="Vyberte účet" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("finance.transactionImport.selectAccount")} /></SelectTrigger>
                   <SelectContent>
                     {accounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Výchozí kategorie výdajů</label>
+                <label className="text-sm font-medium">{t("finance.transactionImport.defaultExpenseCategory")}</label>
                 <Select value={defaultCatId} onValueChange={setDefaultCatId}>
-                  <SelectTrigger><SelectValue placeholder="Vyberte kategorii…" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("finance.transactionImport.selectCategory")} /></SelectTrigger>
                   <SelectContent>
                     {expenseCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
@@ -400,7 +407,7 @@ export default function ImportPage() {
               </div>
               {feeCategory && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Kategorie pro poplatky (Revolut)</label>
+                  <label className="text-sm font-medium">{t("finance.transactionImport.feeCategory")}</label>
                   <Select value={feeCategory} onValueChange={setFeeCategory}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -415,7 +422,7 @@ export default function ImportPage() {
           {/* Investment asset mapping */}
           {!isFinance && preview.tickers.length > 0 && (
             <div className="space-y-3">
-              <p className="text-sm font-medium">Mapování tickerů na aktiva *</p>
+              <p className="text-sm font-medium">{t("finance.transactionImport.tickerMapping")}</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {preview.tickers.map((ticker) => (
                   <div key={ticker} className="flex items-center gap-3">
@@ -425,7 +432,7 @@ export default function ImportPage() {
                       onValueChange={(v) => setAssetMapping((m) => ({ ...m, [ticker]: v }))}
                     >
                       <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Vyberte aktivum…" />
+                        <SelectValue placeholder={t("finance.transactionImport.selectAsset")} />
                       </SelectTrigger>
                       <SelectContent>
                         {assets.map((a) => (
@@ -441,27 +448,27 @@ export default function ImportPage() {
 
           {/* 5-row preview table */}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">Náhled (prvních 5 řádků)</p>
+            <p className="text-sm font-medium text-muted-foreground">{t("finance.transactionImport.previewTitle")}</p>
             <div className="rounded-md border overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Datum</TableHead>
+                    <TableHead>{t("finance.transactions.date")}</TableHead>
                     {isFinance ? (
                       <>
-                        <TableHead>Popis</TableHead>
-                        <TableHead className="text-right">Částka</TableHead>
-                        <TableHead>Typ</TableHead>
-                        {preview.currencies.length > 0 && <TableHead>Kurz ECB</TableHead>}
+                        <TableHead>{t("finance.transactions.description")}</TableHead>
+                        <TableHead className="text-right">{t("finance.transactions.amount")}</TableHead>
+                        <TableHead>{t("finance.transactionImport.incomeLabel")}/{t("finance.transactionImport.expenseLabel")}</TableHead>
+                        {preview.currencies.length > 0 && <TableHead>{t("finance.transactionImport.ecbRate")}</TableHead>}
                       </>
                     ) : (
                       <>
                         <TableHead>Ticker</TableHead>
-                        <TableHead className="text-right">Množství</TableHead>
-                        <TableHead className="text-right">Cena/ks (CZK)</TableHead>
+                        <TableHead className="text-right">{t("finance.transactionImport.qty")}</TableHead>
+                        <TableHead className="text-right">{t("finance.transactionImport.pricePerUnit")}</TableHead>
                       </>
                     )}
-                    <TableHead>Status</TableHead>
+                    <TableHead>{t("finance.transactionImport.status")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -473,21 +480,21 @@ export default function ImportPage() {
                           <TableCell className={`text-right font-medium ${r.type === "INCOME" ? "text-green-600" : "text-red-600"}`}>
                             {r.type === "INCOME" ? "+" : "−"}{formatCurrency(r.amount)}
                           </TableCell>
-                          <TableCell>{r.type === "INCOME" ? "Příjem" : "Výdaj"}</TableCell>
+                          <TableCell>{r.type === "INCOME" ? t("finance.transactionImport.incomeLabel") : t("finance.transactionImport.expenseLabel")}</TableCell>
                           {preview.currencies.length > 0 && (
                             <TableCell className="text-sm">
                               {r.exchangeRate
                                 ? <span className="text-muted-foreground">1 {r.originalCurrency} = {r.exchangeRate.toFixed(3)} CZK</span>
                                 : r.originalCurrency
-                                  ? <span className="text-amber-600">kurz chybí</span>
+                                  ? <span className="text-amber-600">{t("finance.transactionImport.missingRate")}</span>
                                   : "—"
                               }
                             </TableCell>
                           )}
                           <TableCell>
                             {r.isDuplicate
-                              ? <Badge variant="outline" className="text-yellow-600 border-yellow-400">Duplikát</Badge>
-                              : <Badge variant="secondary">OK</Badge>}
+                              ? <Badge variant="outline" className="text-yellow-600 border-yellow-400">{t("finance.transactionImport.duplicate")}</Badge>
+                              : <Badge variant="secondary">{t("finance.transactionImport.ok")}</Badge>}
                           </TableCell>
                         </TableRow>
                       ))
@@ -499,8 +506,8 @@ export default function ImportPage() {
                           <TableCell className="text-right">{formatCurrency(r.pricePerUnit)}</TableCell>
                           <TableCell>
                             {r.isDuplicate
-                              ? <Badge variant="outline" className="text-yellow-600 border-yellow-400">Duplikát</Badge>
-                              : <Badge variant="secondary">OK</Badge>}
+                              ? <Badge variant="outline" className="text-yellow-600 border-yellow-400">{t("finance.transactionImport.duplicate")}</Badge>
+                              : <Badge variant="secondary">{t("finance.transactionImport.ok")}</Badge>}
                           </TableCell>
                         </TableRow>
                       ))
@@ -512,10 +519,10 @@ export default function ImportPage() {
 
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => { setStep(1); setPreview(null); setSelectedFile(null); }}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Zpět
+              <ArrowLeft className="mr-2 h-4 w-4" /> {t("common.back")}
             </Button>
             <Button onClick={() => setStep(3)} disabled={!step2Valid}>
-              Pokračovat <ArrowRight className="ml-2 h-4 w-4" />
+              {t("common.continue")} <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -528,16 +535,16 @@ export default function ImportPage() {
           <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-950/30 text-green-700">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              K importu: <span className="font-bold">{toImportCount}</span>
+              {t("finance.transactionImport.toImport")} <span className="font-bold">{toImportCount}</span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-100 dark:bg-yellow-950/30 text-yellow-700">
               <AlertTriangle className="h-3.5 w-3.5" />
-              Duplikáty (přeskočeny): <span className="font-bold">{dupCount}</span>
+              {t("finance.transactionImport.skipped")} <span className="font-bold">{dupCount}</span>
             </div>
             {errorCount > 0 && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-100 dark:bg-red-950/30 text-red-700">
                 <AlertTriangle className="h-3.5 w-3.5" />
-                Chyby: <span className="font-bold">{errorCount}</span>
+                {t("finance.transactionImport.errorsCount")} <span className="font-bold">{errorCount}</span>
               </div>
             )}
           </div>
@@ -550,7 +557,7 @@ export default function ImportPage() {
                   <TableHead className="w-10">
                     <input
                       type="checkbox"
-                      title="Vybrat vše"
+                      title={t("finance.transactionImport.selectAll")}
                       checked={validRows.every((r) => !rowSkipped[r.rowIndex])}
                       onChange={(e) => {
                         const next: Record<number, boolean> = {};
@@ -559,23 +566,23 @@ export default function ImportPage() {
                       }}
                     />
                   </TableHead>
-                  <TableHead>Datum</TableHead>
+                  <TableHead>{t("finance.transactions.date")}</TableHead>
                   {isFinance ? (
                     <>
-                      <TableHead>Popis</TableHead>
-                      <TableHead className="text-right">Částka</TableHead>
-                      <TableHead>Kategorie</TableHead>
-                      {preview.currencies.length > 0 && <TableHead>Orig. měna</TableHead>}
+                      <TableHead>{t("finance.transactions.description")}</TableHead>
+                      <TableHead className="text-right">{t("finance.transactions.amount")}</TableHead>
+                      <TableHead>{t("finance.transactions.category")}</TableHead>
+                      {preview.currencies.length > 0 && <TableHead>{t("finance.transactionImport.origCurrency")}</TableHead>}
                     </>
                   ) : (
                     <>
-                      <TableHead>Ticker → Aktivum</TableHead>
-                      <TableHead className="text-right">Množství</TableHead>
-                      <TableHead className="text-right">Cena/ks</TableHead>
-                      <TableHead className="text-right">Poplatek</TableHead>
+                      <TableHead>{t("finance.transactionImport.tickerAsset")}</TableHead>
+                      <TableHead className="text-right">{t("finance.transactionImport.qty")}</TableHead>
+                      <TableHead className="text-right">{t("finance.transactionImport.pricePerUnit")}</TableHead>
+                      <TableHead className="text-right">{t("finance.transactionImport.fee")}</TableHead>
                     </>
                   )}
-                  <TableHead>Status</TableHead>
+                  <TableHead>{t("finance.transactionImport.status")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -589,17 +596,17 @@ export default function ImportPage() {
                           </TableRow>
                         );
                       }
-                      const skipped = !!rowSkipped[r.rowIndex];
+                      const isSkipped = !!rowSkipped[r.rowIndex];
                       const rowCats = r.type === "INCOME" ? incomeCategories : expenseCategories;
                       return (
                         <TableRow
                           key={r.rowIndex}
-                          className={`${r.isDuplicate ? "bg-yellow-50 dark:bg-yellow-950/20" : ""} ${skipped ? "opacity-40" : ""}`}
+                          className={`${r.isDuplicate ? "bg-yellow-50 dark:bg-yellow-950/20" : ""} ${isSkipped ? "opacity-40" : ""}`}
                         >
                           <TableCell>
                             <input
                               type="checkbox"
-                              checked={!skipped}
+                              checked={!isSkipped}
                               onChange={(e) => setRowSkipped((s) => ({ ...s, [r.rowIndex]: !e.target.checked }))}
                             />
                           </TableCell>
@@ -614,7 +621,7 @@ export default function ImportPage() {
                               onValueChange={(v) => setRowCategories((rc) => ({ ...rc, [r.rowIndex]: v }))}
                             >
                               <SelectTrigger className="h-8 text-xs w-36">
-                                <SelectValue placeholder="Kategorie…" />
+                                <SelectValue placeholder={t("finance.transactions.category") + "…"} />
                               </SelectTrigger>
                               <SelectContent>
                                 {rowCats.map((c) => (
@@ -632,8 +639,8 @@ export default function ImportPage() {
                           )}
                           <TableCell>
                             {r.isDuplicate
-                              ? <Badge variant="outline" className="text-yellow-600 border-yellow-400 text-xs">Duplikát</Badge>
-                              : <Badge variant="secondary" className="text-xs">OK</Badge>}
+                              ? <Badge variant="outline" className="text-yellow-600 border-yellow-400 text-xs">{t("finance.transactionImport.duplicate")}</Badge>
+                              : <Badge variant="secondary" className="text-xs">{t("finance.transactionImport.ok")}</Badge>}
                           </TableCell>
                         </TableRow>
                       );
@@ -647,17 +654,17 @@ export default function ImportPage() {
                           </TableRow>
                         );
                       }
-                      const skipped = !!rowSkipped[r.rowIndex];
+                      const isSkipped = !!rowSkipped[r.rowIndex];
                       const mappedAsset = assets.find((a) => a.id === assetMapping[r.ticker]);
                       return (
                         <TableRow
                           key={r.rowIndex}
-                          className={`${r.isDuplicate ? "bg-yellow-50 dark:bg-yellow-950/20" : ""} ${skipped ? "opacity-40" : ""}`}
+                          className={`${r.isDuplicate ? "bg-yellow-50 dark:bg-yellow-950/20" : ""} ${isSkipped ? "opacity-40" : ""}`}
                         >
                           <TableCell>
                             <input
                               type="checkbox"
-                              checked={!skipped}
+                              checked={!isSkipped}
                               onChange={(e) => setRowSkipped((s) => ({ ...s, [r.rowIndex]: !e.target.checked }))}
                             />
                           </TableCell>
@@ -666,7 +673,7 @@ export default function ImportPage() {
                             <div className="flex items-center gap-2">
                               <Badge variant="outline" className="font-mono text-xs">{r.ticker}</Badge>
                               <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-sm">{mappedAsset?.name ?? <span className="text-destructive text-xs">Nemapováno</span>}</span>
+                              <span className="text-sm">{mappedAsset?.name ?? <span className="text-destructive text-xs">{t("finance.transactionImport.unmapped")}</span>}</span>
                             </div>
                           </TableCell>
                           <TableCell className="text-right text-sm">{r.quantity}</TableCell>
@@ -674,8 +681,8 @@ export default function ImportPage() {
                           <TableCell className="text-right text-sm">{r.fees > 0 ? formatCurrency(r.fees) : "—"}</TableCell>
                           <TableCell>
                             {r.isDuplicate
-                              ? <Badge variant="outline" className="text-yellow-600 border-yellow-400 text-xs">Duplikát</Badge>
-                              : <Badge variant="secondary" className="text-xs">OK</Badge>}
+                              ? <Badge variant="outline" className="text-yellow-600 border-yellow-400 text-xs">{t("finance.transactionImport.duplicate")}</Badge>
+                              : <Badge variant="secondary" className="text-xs">{t("finance.transactionImport.ok")}</Badge>}
                           </TableCell>
                         </TableRow>
                       );
@@ -687,16 +694,16 @@ export default function ImportPage() {
 
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => setStep(2)}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Zpět
+              <ArrowLeft className="mr-2 h-4 w-4" /> {t("common.back")}
             </Button>
             <Button
               onClick={handleImport}
               disabled={importing || toImportCount === 0}
             >
               {importing ? (
-                <><span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent inline-block" />Importuji…</>
+                <><span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent inline-block" />{t("finance.transactionImport.importing")}</>
               ) : (
-                <>Importovat {toImportCount} řádků <ArrowRight className="ml-2 h-4 w-4" /></>
+                <>{t("finance.transactionImport.importButton")} {toImportCount} {t("finance.transactionImport.rows")} <ArrowRight className="ml-2 h-4 w-4" /></>
               )}
             </Button>
           </div>
@@ -711,9 +718,9 @@ export default function ImportPage() {
               <CheckCircle2 className="h-8 w-8 text-green-600" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold">Import dokončen</h2>
+              <h2 className="text-2xl font-bold">{t("finance.transactionImport.importResult")}</h2>
               <p className="text-muted-foreground mt-1">
-                Importováno do: <strong>{preview ? MODULE_LABELS[preview.module] : ""}</strong>
+                {t("finance.transactionImport.imported")}: <strong>{preview ? MODULE_LABELS[preview.module] : ""}</strong>
               </p>
             </div>
           </div>
@@ -722,29 +729,29 @@ export default function ImportPage() {
             <Card>
               <CardContent className="pt-4 text-center">
                 <p className="text-3xl font-bold text-green-600">{importResult.imported}</p>
-                <p className="text-sm text-muted-foreground">Importováno</p>
+                <p className="text-sm text-muted-foreground">{t("finance.transactionImport.resultImported")}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4 text-center">
                 <p className="text-3xl font-bold text-muted-foreground">{importResult.skipped}</p>
-                <p className="text-sm text-muted-foreground">Přeskočeno</p>
+                <p className="text-sm text-muted-foreground">{t("finance.transactionImport.resultSkipped")}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4 text-center">
                 <p className="text-3xl font-bold text-destructive">{importResult.errors.length}</p>
-                <p className="text-sm text-muted-foreground">Chyby</p>
+                <p className="text-sm text-muted-foreground">{t("finance.transactionImport.resultErrors")}</p>
               </CardContent>
             </Card>
           </div>
 
           {importResult.errors.length > 0 && (
             <Card className="border-destructive/30 bg-destructive/5">
-              <CardHeader><CardTitle className="text-sm text-destructive">Chyby při importu</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-sm text-destructive">{t("finance.transactionImport.importErrorsTitle")}</CardTitle></CardHeader>
               <CardContent className="space-y-1">
-                {importResult.errors.slice(0, 10).map((e, i) => (
-                  <p key={i} className="text-xs text-muted-foreground">{e}</p>
+                {importResult.errors.slice(0, 10).map((e, idx) => (
+                  <p key={idx} className="text-xs text-muted-foreground">{e}</p>
                 ))}
               </CardContent>
             </Card>
@@ -753,14 +760,14 @@ export default function ImportPage() {
           <div className="flex gap-3">
             <Button asChild>
               <Link href={preview?.module === "finance" ? "/finance/transactions" : "/investments/purchases"}>
-                Přejít na {preview?.module === "finance" ? "transakce" : "nákupy"}
+                {preview?.module === "finance" ? t("finance.transactionImport.goToTransactions") : t("finance.transactionImport.goToPurchases")}
               </Link>
             </Button>
             <Button variant="outline" onClick={() => {
               setStep(1); setPreview(null); setSelectedFile(null); setImportResult(null);
               setRowSkipped({}); setRowCategories({}); setAccountId(""); setAssetMapping({});
             }}>
-              Nový import
+              {t("finance.transactionImport.newImport")}
             </Button>
           </div>
         </div>

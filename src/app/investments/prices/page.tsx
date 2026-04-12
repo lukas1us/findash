@@ -13,6 +13,8 @@ import { RefreshCw, Plus, Gem } from "lucide-react";
 import { formatCurrencyPrecise, formatDate } from "@/lib/formatters";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
+import { useTranslation } from "@/lib/i18n/context";
+import { i } from "@/lib/i18n/context";
 
 interface LatestPrice {
   id: string;
@@ -26,6 +28,7 @@ interface Asset { id: string; name: string; ticker: string; type: string }
 
 export default function PricesPage() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [prices, setPrices] = useState<LatestPrice[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [fetching, setFetching] = useState(false);
@@ -60,12 +63,12 @@ export default function PricesPage() {
       const ok = data.results.filter((r: { price: number | null }) => r.price !== null).length;
       const fail = data.results.filter((r: { price: number | null }) => r.price === null).length;
       toast({
-        title: "Ceny aktualizovány",
-        description: `${ok} úspěšně, ${fail} selhalo`,
+        title: t("investments.prices.pricesUpdated"),
+        description: i(t("investments.prices.pricesUpdateDesc"), { ok, fail }),
       });
       load();
     } catch {
-      toast({ title: "Chyba při načítání cen", variant: "destructive" });
+      toast({ title: t("investments.prices.fetchError"), variant: "destructive" });
     } finally {
       setFetching(false);
     }
@@ -77,20 +80,20 @@ export default function PricesPage() {
       const res = await fetch("/api/investments/prices/metals", { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        toast({ title: "Chyba při načítání cen kovů", description: data.error, variant: "destructive" });
+        toast({ title: t("investments.prices.metalsFetchError"), description: data.error, variant: "destructive" });
         return;
       }
       if (data.updated.length === 0) {
-        toast({ title: "Žádná aktiva ke stažení", description: data.error ?? "V DB není žádné aktivum XAU/XAG" });
+        toast({ title: t("investments.prices.noMetalsAssets"), description: data.error ?? t("investments.prices.noMetalsAssets") });
         return;
       }
       toast({
-        title: "Ceny kovů aktualizovány",
-        description: `Aktualizováno: ${data.updated.join(", ")}`,
+        title: t("investments.prices.metalsUpdated"),
+        description: i(t("investments.prices.metalsUpdatedDesc"), { assets: data.updated.join(", ") }),
       });
       load();
     } catch {
-      toast({ title: "Chyba při načítání cen kovů", variant: "destructive" });
+      toast({ title: t("investments.prices.metalsFetchError"), variant: "destructive" });
     } finally {
       setFetchingMetals(false);
     }
@@ -124,14 +127,14 @@ export default function PricesPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast({ title: "Chyba", description: data.error ?? `HTTP ${res.status}`, variant: "destructive" });
+        toast({ title: t("investments.prices.saveError"), description: data.error ?? `HTTP ${res.status}`, variant: "destructive" });
         return;
       }
-      toast({ title: "Cena aktualizována" });
+      toast({ title: t("investments.prices.priceUpdated") });
       setFormOpen(false);
       load();
     } catch {
-      toast({ title: "Chyba", variant: "destructive" });
+      toast({ title: t("investments.prices.saveError"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -143,34 +146,34 @@ export default function PricesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Ceny aktiv</h1>
-          <p className="text-muted-foreground">Manuální a automatická aktualizace cen</p>
+          <h1 className="text-3xl font-bold">{t("investments.prices.title")}</h1>
+          <p className="text-muted-foreground">{t("investments.prices.subtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={handleMetalsFetch} disabled={fetchingMetals} variant="outline">
             <Gem className={`mr-2 h-4 w-4 ${fetchingMetals ? "animate-spin" : ""}`} />
-            {fetchingMetals ? "Načítám…" : "Aktualizovat zlato & stříbro"}
+            {fetchingMetals ? t("common.loading") : t("investments.prices.updateMetals")}
           </Button>
           <Button onClick={handleAutoFetch} disabled={fetching} variant="outline">
             <RefreshCw className={`mr-2 h-4 w-4 ${fetching ? "animate-spin" : ""}`} />
-            {fetching ? "Načítám…" : "Auto-fetch krypto"}
+            {fetching ? t("common.loading") : t("investments.prices.fetchCrypto")}
           </Button>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Aktuální ceny</CardTitle>
+          <CardTitle className="text-base">{t("investments.prices.currentPrices")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Aktivum</TableHead>
-                <TableHead>Typ</TableHead>
-                <TableHead className="text-right">Aktuální cena</TableHead>
-                <TableHead>Zdroj</TableHead>
-                <TableHead>Poslední aktualizace</TableHead>
+                <TableHead>{t("investments.prices.asset")}</TableHead>
+                <TableHead>{t("investments.prices.type")}</TableHead>
+                <TableHead className="text-right">{t("investments.prices.currentPrice")}</TableHead>
+                <TableHead>{t("investments.prices.source")}</TableHead>
+                <TableHead>{t("investments.prices.lastUpdate")}</TableHead>
                 <TableHead className="w-28"></TableHead>
               </TableRow>
             </TableHeader>
@@ -190,7 +193,7 @@ export default function PricesPage() {
                     <TableCell>
                       {p && (
                         <Badge variant={p.source === "API" ? "default" : "secondary"}>
-                          {p.source === "API" ? "API" : "Manuální"}
+                          {p.source === "API" ? t("common.apiSource") : t("common.manualSource")}
                         </Badge>
                       )}
                     </TableCell>
@@ -200,7 +203,7 @@ export default function PricesPage() {
                     <TableCell>
                       <Button size="sm" variant="outline" onClick={() => openManualUpdate(a)}>
                         <Plus className="mr-1 h-3 w-3" />
-                        Aktualizovat
+                        {t("investments.prices.updateButton")}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -209,7 +212,7 @@ export default function PricesPage() {
               {assets.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    Žádná aktiva
+                    {t("investments.prices.noAssets")}
                   </TableCell>
                 </TableRow>
               )}
@@ -222,16 +225,16 @@ export default function PricesPage() {
         <DialogContent aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>
-              Aktualizace ceny — {selectedAsset?.name} ({selectedAsset?.ticker})
+              {i(t("investments.prices.manualUpdateTitle"), { name: selectedAsset?.name ?? "", ticker: selectedAsset?.ticker ?? "" })}
             </DialogTitle>
             <DialogDescription>
-              Zadejte aktuální cenu aktiva v CZK.
+              {t("investments.prices.manualUpdateDesc")}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleManualSave} className="space-y-4">
             <div className="space-y-2">
               <Label>
-                Nová cena (CZK{isGoldSilver ? `/${priceUnit}` : ""})
+                {i(t("investments.prices.newPrice"), { unit: isGoldSilver ? `/${priceUnit}` : "" })}
               </Label>
               <div className="flex gap-2">
                 <Input
@@ -259,9 +262,9 @@ export default function PricesPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>Zrušit</Button>
+              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>{t("common.cancel")}</Button>
               <Button type="submit" disabled={saving}>
-                {saving ? "Ukládám…" : "Uložit"}
+                {saving ? t("common.saving") : t("common.save")}
               </Button>
             </DialogFooter>
           </form>

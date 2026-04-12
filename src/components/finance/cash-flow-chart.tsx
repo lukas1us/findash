@@ -12,16 +12,19 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { formatCurrency } from "@/lib/formatters";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface Props {
   data: { month: string; income: number; expense: number }[];
 }
 
 export function CashFlowChart({ data }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Cash Flow (posledních 6 měsíců)</CardTitle>
+        <CardTitle className="text-base">{t("finance.charts.cashFlowTitle")}</CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={280}>
@@ -37,8 +40,8 @@ export function CashFlowChart({ data }: Props) {
               labelClassName="font-medium"
             />
             <Legend />
-            <Bar dataKey="income" name="Příjmy" fill="#22c55e" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="expense" name="Výdaje" fill="#ef4444" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="income" name={t("finance.charts.income")} fill="#22c55e" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="expense" name={t("finance.charts.expense")} fill="#ef4444" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

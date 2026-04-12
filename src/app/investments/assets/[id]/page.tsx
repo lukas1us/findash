@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -40,6 +39,8 @@ import {
 } from "recharts";
 import { ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
 import { formatCurrency, formatNumber, formatDate, formatMonth } from "@/lib/formatters";
+import { useTranslation } from "@/lib/i18n/context";
+import { i } from "@/lib/i18n/context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,7 @@ interface Pagination {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 type TxType = "BUY" | "SELL" | "DEPOSIT" | "WITHDRAWAL" | "REWARD" | "SWAP";
+type TabKey = "overview" | "transactions" | "chart";
 
 const TYPE_BADGE: Record<TxType, string> = {
   BUY:        "bg-green-500/20 text-green-400 border-green-500/30",
@@ -91,18 +93,6 @@ const TYPE_BADGE: Record<TxType, string> = {
   WITHDRAWAL: "bg-orange-500/20 text-orange-400 border-orange-500/30",
   SWAP:       "bg-purple-500/20 text-purple-400 border-purple-500/30",
 };
-
-const TYPE_LABELS: Record<TxType, string> = {
-  BUY:        "Nákup",
-  SELL:       "Prodej",
-  REWARD:     "Odměna",
-  DEPOSIT:    "Vklad",
-  WITHDRAWAL: "Výběr",
-  SWAP:       "Swap",
-};
-
-const TABS = ["Přehled", "Transakce", "Graf"] as const;
-type Tab = (typeof TABS)[number];
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 
@@ -124,7 +114,23 @@ function StatCard({ title, value, sub, positive }: { title: string; value: strin
 
 export default function AssetDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [tab, setTab] = useState<Tab>("Přehled");
+  const { t } = useTranslation();
+  const [tab, setTab] = useState<TabKey>("overview");
+
+  const TABS: { key: TabKey; label: string }[] = useMemo(() => [
+    { key: "overview", label: t("investments.assetDetail.tabs.overview") },
+    { key: "transactions", label: t("investments.assetDetail.tabs.transactions") },
+    { key: "chart", label: t("investments.assetDetail.tabs.chart") },
+  ], [t]);
+
+  const TYPE_LABELS = useMemo((): Record<TxType, string> => ({
+    BUY:        t("investments.assetDetail.txTypes.BUY"),
+    SELL:       t("investments.assetDetail.txTypes.SELL"),
+    REWARD:     t("investments.assetDetail.txTypes.REWARD"),
+    DEPOSIT:    t("investments.assetDetail.txTypes.DEPOSIT"),
+    WITHDRAWAL: t("investments.assetDetail.txTypes.WITHDRAWAL"),
+    SWAP:       t("investments.assetDetail.txTypes.SWAP"),
+  }), [t]);
 
   // Stats
   const [stats, setStats] = useState<AssetStats | null>(null);
@@ -177,11 +183,10 @@ export default function AssetDetailPage() {
 
   // ── Chart data ─────────────────────────────────────────────────────────────
 
-  // Monthly buy vs sell volume in CZK
   const monthlyData = (() => {
     const map: Record<string, { month: string; buy: number; sell: number }> = {};
     for (const tx of allTxs) {
-      const key = tx.date.slice(0, 7); // YYYY-MM
+      const key = tx.date.slice(0, 7);
       if (!map[key]) map[key] = { month: formatMonth(tx.date.slice(0, 10)), buy: 0, sell: 0 };
       const czk = tx.totalCZK ?? (tx.pricePerUnit ? Math.abs(tx.quantity) * tx.pricePerUnit : 0);
       if (tx.type === "BUY") map[key].buy += czk;
@@ -190,13 +195,11 @@ export default function AssetDetailPage() {
     return Object.values(map);
   })();
 
-  // Portfolio value over time (cumulative quantity × current price as proxy)
-  // Use avgBuyPrice as a proxy when no price history is available
   const portfolioData = (() => {
     if (!stats) return [];
     let qty = 0;
     return allTxs.map((tx) => {
-      qty += tx.quantity; // positive for BUY/DEPOSIT/REWARD, negative for SELL/WITHDRAWAL
+      qty += tx.quantity;
       const price = tx.pricePerUnit ?? stats.currentPrice;
       return {
         date: formatDate(tx.date.slice(0, 10)),
@@ -226,54 +229,54 @@ export default function AssetDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b">
-        {TABS.map((t) => (
+        {TABS.map((tab_) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tab_.key}
+            onClick={() => setTab(tab_.key)}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              tab === t
+              tab === tab_.key
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t}
+            {tab_.label}
           </button>
         ))}
       </div>
 
-      {/* ── Tab: Přehled ──────────────────────────────────────────────────────── */}
-      {tab === "Přehled" && stats && (
+      {/* ── Tab: Overview ─────────────────────────────────────────────────────── */}
+      {tab === "overview" && stats && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="Aktuální cena"
+            title={t("investments.assetDetail.currentPrice")}
             value={formatCurrency(stats.currentPrice)}
-            sub={stats.lastPriceUpdate ? `Aktualizováno ${formatDate(stats.lastPriceUpdate)}` : "Cena není k dispozici"}
+            sub={stats.lastPriceUpdate ? `${t("investments.assetDetail.updatedAt")} ${formatDate(stats.lastPriceUpdate)}` : t("investments.assetDetail.noPriceAvailable")}
           />
           <StatCard
-            title="Celkové množství"
+            title={t("investments.assetDetail.totalQuantity")}
             value={formatNumber(stats.totalQuantity)}
-            sub={`${stats.txCount} transakcí`}
+            sub={`${stats.txCount} ${t("investments.assetDetail.transactions")}`}
           />
           <StatCard
-            title="Průměrná nákupní cena"
+            title={t("investments.assetDetail.avgBuyPrice")}
             value={formatCurrency(stats.avgBuyPrice)}
           />
           <StatCard
-            title="Celkem investováno"
+            title={t("investments.assetDetail.totalInvested")}
             value={formatCurrency(stats.totalInvestedCZK)}
           />
           <StatCard
-            title="Aktuální hodnota"
+            title={t("investments.assetDetail.currentValue")}
             value={formatCurrency(stats.currentValue)}
           />
           <StatCard
-            title="Nerealizovaný P&L"
+            title={t("investments.assetDetail.unrealizedPnl")}
             value={`${stats.unrealizedPnL >= 0 ? "+" : ""}${formatCurrency(stats.unrealizedPnL)}`}
             sub={`${stats.unrealizedPnLPct >= 0 ? "+" : ""}${stats.unrealizedPnLPct.toFixed(1)} %`}
             positive={stats.unrealizedPnL >= 0 ? true : false}
           />
           <StatCard
-            title="Realizovaný P&L"
+            title={t("investments.assetDetail.realizedPnl")}
             value={`${stats.realizedPnL >= 0 ? "+" : ""}${formatCurrency(stats.realizedPnL)}`}
             positive={stats.realizedPnL >= 0 ? true : false}
           />
@@ -283,29 +286,29 @@ export default function AssetDetailPage() {
                 ? <TrendingUp className="h-8 w-8 text-green-400" />
                 : <TrendingDown className="h-8 w-8 text-red-400" />}
               <p className="text-sm text-muted-foreground text-center">
-                {stats.unrealizedPnL >= 0 ? "V zisku" : "Ve ztrátě"}
+                {stats.unrealizedPnL >= 0 ? t("investments.assetDetail.inProfit") : t("investments.assetDetail.inLoss")}
               </p>
             </CardContent>
           </Card>
         </div>
       )}
-      {tab === "Přehled" && statsLoading && (
-        <p className="text-muted-foreground text-sm">Načítám…</p>
+      {tab === "overview" && statsLoading && (
+        <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
       )}
 
-      {/* ── Tab: Transakce ────────────────────────────────────────────────────── */}
-      {tab === "Transakce" && (
+      {/* ── Tab: Transactions ─────────────────────────────────────────────────── */}
+      {tab === "transactions" && (
         <div className="space-y-4">
           {/* Filters */}
           <div className="flex flex-wrap gap-3">
             <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1); }}>
               <SelectTrigger className="w-40">
-                <SelectValue placeholder="Typ" />
+                <SelectValue placeholder={t("investments.assetDetail.type")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">Všechny typy</SelectItem>
-                {(Object.keys(TYPE_LABELS) as TxType[]).map((t) => (
-                  <SelectItem key={t} value={t}>{TYPE_LABELS[t]}</SelectItem>
+                <SelectItem value="ALL">{t("investments.assetDetail.allTypes")}</SelectItem>
+                {(Object.keys(TYPE_LABELS) as TxType[]).map((txType) => (
+                  <SelectItem key={txType} value={txType}>{TYPE_LABELS[txType]}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -314,8 +317,8 @@ export default function AssetDetailPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="date_desc">Nejnovější</SelectItem>
-                <SelectItem value="date_asc">Nejstarší</SelectItem>
+                <SelectItem value="date_desc">{t("investments.assetDetail.newest")}</SelectItem>
+                <SelectItem value="date_asc">{t("investments.assetDetail.oldest")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -325,27 +328,27 @@ export default function AssetDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Datum</TableHead>
-                    <TableHead>Typ</TableHead>
-                    <TableHead className="text-right">Množství</TableHead>
-                    <TableHead className="text-right">Cena/ks</TableHead>
-                    <TableHead className="text-right">Celkem CZK</TableHead>
-                    <TableHead className="text-right">Poplatek</TableHead>
-                    <TableHead>Zdroj</TableHead>
+                    <TableHead>{t("investments.assetDetail.date")}</TableHead>
+                    <TableHead>{t("investments.assetDetail.type")}</TableHead>
+                    <TableHead className="text-right">{t("investments.assetDetail.quantity")}</TableHead>
+                    <TableHead className="text-right">{t("investments.assetDetail.pricePerUnit")}</TableHead>
+                    <TableHead className="text-right">{t("investments.assetDetail.totalCzk")}</TableHead>
+                    <TableHead className="text-right">{t("investments.assetDetail.fee")}</TableHead>
+                    <TableHead>{t("investments.assetDetail.source")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {txLoading && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                        Načítám…
+                        {t("common.loading")}
                       </TableCell>
                     </TableRow>
                   )}
                   {!txLoading && txs.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                        Žádné transakce
+                        {t("investments.assetDetail.noTransactions")}
                       </TableCell>
                     </TableRow>
                   )}
@@ -380,7 +383,7 @@ export default function AssetDetailPage() {
           {/* Pagination */}
           {pagination.pages > 1 && (
             <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>Celkem {pagination.total} transakcí</span>
+              <span>{i(t("investments.assetDetail.totalTransactions"), { n: pagination.total })}</span>
               <div className="flex gap-2">
                 <Button
                   size="sm"
@@ -388,7 +391,7 @@ export default function AssetDetailPage() {
                   disabled={page <= 1}
                   onClick={() => setPage((p) => p - 1)}
                 >
-                  Předchozí
+                  {t("investments.assetDetail.previous")}
                 </Button>
                 <span className="flex items-center px-2">
                   {page} / {pagination.pages}
@@ -399,7 +402,7 @@ export default function AssetDetailPage() {
                   disabled={page >= pagination.pages}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  Další
+                  {t("investments.assetDetail.next")}
                 </Button>
               </div>
             </div>
@@ -407,17 +410,17 @@ export default function AssetDetailPage() {
         </div>
       )}
 
-      {/* ── Tab: Graf ─────────────────────────────────────────────────────────── */}
-      {tab === "Graf" && (
+      {/* ── Tab: Chart ─────────────────────────────────────────────────────────── */}
+      {tab === "chart" && (
         <div className="space-y-6">
           {/* Portfolio value line chart */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Hodnota portfolia (aproximace)</CardTitle>
+              <CardTitle className="text-base">{t("investments.assetDetail.portfolioChartTitle")}</CardTitle>
             </CardHeader>
             <CardContent>
               {portfolioData.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-8 text-center">Žádná data</p>
+                <p className="text-muted-foreground text-sm py-8 text-center">{t("common.noData")}</p>
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
                   <LineChart data={portfolioData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
@@ -429,7 +432,7 @@ export default function AssetDetailPage() {
                       tickFormatter={(v: number) => `${Math.round(v / 1000)}k`}
                     />
                     <Tooltip
-                      formatter={(v: number) => [formatCurrency(v), "Hodnota"]}
+                      formatter={(v: number) => [formatCurrency(v), t("investments.assetDetail.chartValue")]}
                       contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
                     />
                     <Line
@@ -448,11 +451,11 @@ export default function AssetDetailPage() {
           {/* Monthly buy vs sell bar chart */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Měsíční objem nákupů / prodejů (CZK)</CardTitle>
+              <CardTitle className="text-base">{t("investments.assetDetail.volumeChartTitle")}</CardTitle>
             </CardHeader>
             <CardContent>
               {monthlyData.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-8 text-center">Žádná data</p>
+                <p className="text-muted-foreground text-sm py-8 text-center">{t("common.noData")}</p>
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={monthlyData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
@@ -464,10 +467,10 @@ export default function AssetDetailPage() {
                       tickFormatter={(v: number) => `${Math.round(v / 1000)}k`}
                     />
                     <Tooltip
-                      formatter={(v: number, name: string) => [formatCurrency(v), name === "buy" ? "Nákup" : "Prodej"]}
+                      formatter={(v: number, name: string) => [formatCurrency(v), name === "buy" ? t("investments.assetDetail.chartBuy") : t("investments.assetDetail.chartSell")]}
                       contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
                     />
-                    <Legend formatter={(v) => (v === "buy" ? "Nákup" : "Prodej")} />
+                    <Legend formatter={(v) => (v === "buy" ? t("investments.assetDetail.chartBuy") : t("investments.assetDetail.chartSell"))} />
                     <Bar dataKey="buy" fill="#22c55e" radius={[3, 3, 0, 0]} />
                     <Bar dataKey="sell" fill="#ef4444" radius={[3, 3, 0, 0]} />
                   </BarChart>

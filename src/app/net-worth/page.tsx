@@ -16,6 +16,8 @@ import {
 import { Wallet, TrendingUp, BarChart3, Save, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { format, parseISO } from "date-fns";
+import { useTranslation } from "@/lib/i18n/context";
+import { i } from "@/lib/i18n/context";
 
 interface Snapshot {
   id: number;
@@ -26,6 +28,7 @@ interface Snapshot {
 }
 
 export default function NetWorthPage() {
+  const { t } = useTranslation();
   const [history, setHistory] = useState<Snapshot[]>([]);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -40,11 +43,11 @@ export default function NetWorthPage() {
         if (Array.isArray(data)) {
           setHistory(data);
         } else {
-          setLoadError(data.error ?? "Nepodařilo se načíst historii");
+          setLoadError(data.error ?? t("netWorth.loadError"));
         }
       })
-      .catch(() => setLoadError("Nepodařilo se načíst historii"));
-  }, [months]);
+      .catch(() => setLoadError(t("netWorth.loadError")));
+  }, [months, t]);
 
   useEffect(() => {
     loadHistory();
@@ -57,12 +60,12 @@ export default function NetWorthPage() {
       const res = await fetch("/api/net-worth/snapshot", { method: "POST" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setSaveError(data.error ?? `Chyba ${res.status}`);
+        setSaveError(data.error ?? t("netWorth.saveError"));
         return;
       }
       loadHistory();
     } catch {
-      setSaveError("Nepodařilo se uložit snapshot");
+      setSaveError(t("netWorth.saveError"));
     } finally {
       setSaving(false);
     }
@@ -81,19 +84,19 @@ export default function NetWorthPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Net Worth</h1>
-          <p className="text-muted-foreground">Historické sledování čisté hodnoty majetku</p>
+          <h1 className="text-3xl font-bold">{t("netWorth.title")}</h1>
+          <p className="text-muted-foreground">{t("netWorth.subtitle")}</p>
         </div>
         <Button onClick={handleSave} disabled={saving}>
           {saving ? (
             <>
               <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent inline-block" />
-              Ukládám…
+              {t("netWorth.saving")}
             </>
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Uložit dnešní snapshot
+              {t("netWorth.saveSnapshot")}
             </>
           )}
         </Button>
@@ -117,33 +120,33 @@ export default function NetWorthPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hotovost &amp; účty</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("netWorth.cash")}</CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
               {formatCurrency(latest?.cashTotal ?? 0)}
             </div>
-            <p className="text-xs text-muted-foreground">Součet zůstatků všech účtů</p>
+            <p className="text-xs text-muted-foreground">{t("netWorth.cashDesc")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Investice</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("netWorth.investments")}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
               {formatCurrency(latest?.investmentsTotal ?? 0)}
             </div>
-            <p className="text-xs text-muted-foreground">Tržní hodnota portfolia</p>
+            <p className="text-xs text-muted-foreground">{t("netWorth.investmentsDesc")}</p>
           </CardContent>
         </Card>
 
         <Card className="border-primary/30 bg-primary/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Worth celkem</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("netWorth.total")}</CardTitle>
             <BarChart3 className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
@@ -152,8 +155,8 @@ export default function NetWorthPage() {
             </div>
             <p className="text-xs text-muted-foreground">
               {latest
-                ? `Poslední snapshot: ${format(parseISO(latest.date), "dd.MM.yyyy")}`
-                : "Zatím žádný snapshot"}
+                ? i(t("netWorth.lastSnapshot"), { date: format(parseISO(latest.date), "dd.MM.yyyy") })
+                : t("netWorth.noSnapshot")}
             </p>
           </CardContent>
         </Card>
@@ -162,14 +165,14 @@ export default function NetWorthPage() {
       {/* Chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Vývoj čisté hodnoty majetku</CardTitle>
+          <CardTitle className="text-base">{t("netWorth.chartTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           {history.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground gap-3">
               <BarChart3 className="h-10 w-10 opacity-30" />
               <p className="text-sm">
-                Zatím žádná data. Klikni na &ldquo;Uložit dnešní snapshot&rdquo; pro první záznam.
+                {t("netWorth.noDataHint")}
               </p>
             </div>
           ) : (
@@ -199,20 +202,20 @@ export default function NetWorthPage() {
                   formatter={(value: number, name: string) => [
                     formatCurrency(value),
                     name === "cashTotal"
-                      ? "Hotovost"
+                      ? t("netWorth.cashLabel")
                       : name === "investmentsTotal"
-                      ? "Investice"
-                      : "Net Worth",
+                      ? t("netWorth.investmentsLabel")
+                      : t("netWorth.netWorthLabel"),
                   ]}
                   labelClassName="font-medium"
                 />
                 <Legend
                   formatter={(value) =>
                     value === "cashTotal"
-                      ? "Hotovost"
+                      ? t("netWorth.cashLabel")
                       : value === "investmentsTotal"
-                      ? "Investice"
-                      : "Net Worth"
+                      ? t("netWorth.investmentsLabel")
+                      : t("netWorth.netWorthLabel")
                   }
                 />
                 <Area
